@@ -270,6 +270,9 @@ func (s *Server) tools(v *View) []Tool {
 			Tool{Name: "files", Label: "Files", URL: "/_/files", Active: v.Mode == "files"},
 		)
 	}
+	if v.User != "" || s.cfg.Public {
+		t = append(t, Tool{Name: "help", Label: "Help", URL: "/_/help", Active: v.Mode == "help"})
+	}
 	if v.User != "" {
 		t = append(t, Tool{Name: "account", Label: "Your account", URL: "/_/account", Active: v.Mode == "account"})
 		if v.IsAdmin {

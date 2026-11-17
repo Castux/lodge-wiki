@@ -6,7 +6,7 @@ Built for this group, not as a generic product. The rule: anything generic is co
 
 - Plan and architecture: [PLAN.md](PLAN.md)
 - Calls made along the way: [DECISIONS.md](DECISIONS.md)
-- Page syntax: [docs/syntax.md](docs/syntax.md)
+- User guide (page names, syntax, listings, widgets), also served at `/_/help`: [docs/guide.md](docs/guide.md)
 - Content repo: [`lodge-data`](https://github.com/Castux/lodge-data), checked out as the sibling folder `../lodge-data`
 - Current DokuWiki copy (migration source): `../public_html`
 
@@ -47,7 +47,7 @@ Media files (images, sounds, pdfs) are in `../lodge-data/_media/`, which is git-
 | `internal/wiki` | page ids, the content store, the git write queue, the in-memory index |
 | `internal/render` | markdown to HTML (goldmark): heading ids, link classes (`missing`, `external`), scaled images, the table of contents, `list` blocks |
 | `internal/server` | HTTP: pages, editor, history, diff, search, rename, media, the widget API; built-in UI in `ui/` and `static/` |
-| `migrate/` | the one-off DokuWiki migration script and its report |
+| `migrate/` | the one-off DokuWiki migration script, its report, and how to catch up with the live wiki until the switch-over ([SYNC.md](migrate/SYNC.md)) |
 | `tools/checkrender` | renders every page and lists leftover syntax and broken links |
 
 ## Widget API

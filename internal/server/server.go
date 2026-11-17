@@ -96,6 +96,7 @@ func (s *Server) routes() {
 	m.Handle("GET /_/files", s.need(RoleEditor, s.files))
 	m.Handle("GET /_/new", s.need(RoleEditor, s.newFile))
 	m.Handle("GET /_/create", s.need(RoleEditor, s.createForm))
+	m.Handle("GET /_/help", s.need(RoleReader, s.help))
 	m.Handle("GET /_/recent", s.need(RoleReader, s.recent))
 	m.Handle("GET /_/search", s.need(RoleReader, s.search))
 	m.Handle("GET /_/index", s.need(RoleReader, s.index))

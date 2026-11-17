@@ -12,7 +12,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// ListOptions are the options of a ```list block (see docs/syntax.md).
+// ListOptions are the options of a ```list block (see docs/guide.md).
 type ListOptions struct {
 	NS         *string  `yaml:"ns"`
 	Exclude    []string `yaml:"exclude"`

@@ -101,7 +101,7 @@ func Name(id string) string {
 }
 
 // Resolve turns a link target written in a page of namespace ns into a
-// clean absolute id. See docs/syntax.md for the rules. A trailing '/'
+// clean absolute id. See docs/guide.md (Links) for the rules. A trailing '/'
 // points at the namespace's start page.
 func Resolve(ns, target string) string {
 	target = strings.TrimSpace(target)

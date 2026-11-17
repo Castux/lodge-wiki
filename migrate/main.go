@@ -2,6 +2,9 @@
 //
 //	go run ./migrate --src ../public_html --out ../lodge-data
 //
+// After lodge-data became the source, it is only used to catch up with
+// changes on the live DokuWiki: see SYNC.md.
+//
 // It recreates --out as a fresh git repository: the full page history is
 // replayed with git fast-import (one commit per DokuWiki change), then a
 // final commit makes the tree match the current pages, and media files
@@ -47,10 +50,16 @@ func main() {
 	noHistory := flag.Bool("no-history", false, "skip history replay")
 	pages := flag.String("pages", "", "comma-separated page ids: only re-convert these into --out")
 	force := flag.Bool("force", false, "recreate --out even if it has commits after the migration")
+	copyNew := flag.Bool("copy-media", false, "with --changed-since: also copy the changed media files into --out/_media")
+	changedSince := flag.String("changed-since", "", "only list the DokuWiki pages and media changed after this date (YYYY-MM-DD), then exit")
 	flag.Parse()
 	start := time.Now()
 
 	data := filepath.Join(*src, "data")
+	if *changedSince != "" {
+		listChanges(data, *changedSince, *copyNew, filepath.Join(*out, "_media"))
+		return
+	}
 	pagesDir := filepath.Join(data, "pages")
 
 	// Current pages: ids, text, titles.
