@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"html/template"
+	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -101,6 +102,7 @@ func (s *Server) editData(id, text, base string, exists bool) map[string]any {
 	return map[string]any{
 		"ID": id, "File": file, "URL": back, "Text": text, "Base": base, "Exists": exists,
 		"IsFile": isFile(id), "Lang": textExts[strings.ToLower(path.Ext(file))], "NS": wiki.Namespace(id),
+		"Managed": managedFiles[file].Note, "ReadOnly": managedFiles[file].ReadOnly,
 	}
 }
 
@@ -139,7 +141,30 @@ func (s *Server) editForm(w http.ResponseWriter, r *http.Request) {
 }
 
 // validate refuses content that would break the site.
+// Managed files are written by the server itself. Read-only ones cannot
+// be saved from the editor at all; the others show a warning.
+type managedFile struct {
+	ReadOnly bool
+	Note     string
+}
+
+var managedFiles = map[string]managedFile{
+	MediaManifestFile: {true, "The wiki keeps this list of media files up to date by itself, after every upload, move and delete. It is read-only: changing it by hand would only make it wrong, and backups rely on it."},
+	UsersFile:         {false, "The accounts. Normally changed on the Users page; edit by hand only to repair something. Saving checks that every account still has a valid password hash and role."},
+}
+
 func validate(file string, content []byte) string {
+	if file == UsersFile {
+		var users map[string]*User
+		if err := json.Unmarshal(content, &users); err != nil {
+			return "This is not a valid accounts file, so it was not saved: " + err.Error()
+		}
+		for name, u := range users {
+			if u == nil || !strings.HasPrefix(u.Hash, "$2") || u.Role < RolePending || u.Role > RoleAdmin {
+				return "The account " + name + " needs a bcrypt password hash and a role from 0 to 3, so nothing was saved."
+			}
+		}
+	}
 	switch path.Ext(file) {
 	case ".json":
 		if !json.Valid(content) {
@@ -161,6 +186,10 @@ func (s *Server) save(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	file := fileOf(id)
+	if managedFiles[file].ReadOnly {
+		http.Error(w, "this file is maintained by the wiki and cannot be edited", http.StatusForbidden)
+		return
+	}
 	text := strings.ReplaceAll(r.FormValue("text"), "\r\n", "\n")
 	summary := strings.TrimSpace(r.FormValue("summary"))
 	var content []byte
@@ -204,6 +233,11 @@ func (s *Server) save(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	if file == UsersFile {
+		if err := s.auth.Reload(); err != nil {
+			log.Printf("reloading accounts: %v", err)
+		}
+	}
 	if isFile(id) {
 		http.Redirect(w, r, "/_/files?dir="+url.QueryEscape(path.Dir(file))+"&saved="+url.QueryEscape(path.Base(file)), http.StatusSeeOther)
 		return
@@ -227,6 +261,8 @@ type FileEntry struct {
 	Media    bool // a file or folder under _media
 	Image    bool // an image, shown as a thumbnail
 	Uses     int  // pages using this media file or folder
+	Managed  bool // written by the server (see managedFiles)
+	ReadOnly bool
 }
 
 // files is a browser for the whole content repo (except media).
@@ -294,6 +330,9 @@ func (s *Server) files(w http.ResponseWriter, r *http.Request) {
 			}
 			_, text := textExts[ext]
 			fe.Editable = text && (!admin || isAdmin)
+			if m, ok := managedFiles[rel]; ok {
+				fe.Managed, fe.ReadOnly = true, m.ReadOnly
+			}
 		}
 		rows = append(rows, fe)
 	}

@@ -115,6 +115,25 @@ func NewAuth(state string, git *wiki.Git) (*Auth, error) {
 	return a, nil
 }
 
+// Reload reads the accounts file again (after it was edited by hand).
+func (a *Auth) Reload() error {
+	b, err := os.ReadFile(a.file)
+	if err != nil {
+		return err
+	}
+	users := map[string]*User{}
+	if err := json.Unmarshal(b, &users); err != nil {
+		return err
+	}
+	for n, u := range users {
+		u.Name = n
+	}
+	a.mu.Lock()
+	a.users = users
+	a.mu.Unlock()
+	return nil
+}
+
 // HasUsers reports whether any account exists.
 func (a *Auth) HasUsers() bool {
 	a.mu.RLock()

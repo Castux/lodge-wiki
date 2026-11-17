@@ -42,11 +42,11 @@
     <td><a href="/_/files?dir={{.Path}}">📁 {{.Name}}</a>{{if .Admin}} <span class="lw-quiet">(admins)</span>{{end}}{{if .Media}} <span class="lw-quiet">images and other media</span>{{end}}</td><td></td><td></td>
     <td class="lw-actions">{{if .Movable}}<a href="/_/mv?path={{.Path}}">move</a>{{end}}</td>
     {{else}}
-    <td>{{if .Page}}<a href="{{pageurl .Page}}">{{.Name}}</a>{{if .Title}} <span class="lw-quiet">{{.Title}}</span>{{end}}{{else}}{{.Name}}{{end}}</td>
+    <td>{{if .Page}}<a href="{{pageurl .Page}}">{{.Name}}</a>{{if .Title}} <span class="lw-quiet">{{.Title}}</span>{{end}}{{else}}{{.Name}}{{end}}{{if .Managed}} <span class="lw-badge" title="Written by the wiki itself">{{if .ReadOnly}}maintained by the wiki{{else}}managed by the wiki: edit with care{{end}}</span>{{end}}</td>
     <td class="lw-quiet">{{size .Size}}</td>
     <td class="lw-quiet" title="{{date .Modified}}">{{ago .Modified}}</td>
     <td class="lw-actions">
-      {{if .Editable}}<a href="/_/edit/{{if .Page}}{{.Page}}{{else}}{{.Path}}{{end}}">edit</a> · {{end}}<a href="/_/history/{{if .Page}}{{.Page}}{{else}}{{.Path}}{{end}}">history</a>{{if .Movable}} · <a href="/_/mv?path={{.Path}}">move</a>{{end}}{{if not .Page}} · <a href="/{{.Path}}" target="_blank">open</a>{{end}}
+      {{if .Editable}}<a href="/_/edit/{{if .Page}}{{.Page}}{{else}}{{.Path}}{{end}}">{{if .ReadOnly}}view{{else}}edit{{end}}</a> · {{end}}<a href="/_/history/{{if .Page}}{{.Page}}{{else}}{{.Path}}{{end}}">history</a>{{if .Movable}} · <a href="/_/mv?path={{.Path}}">move</a>{{end}}{{if not .Page}} · <a href="/{{.Path}}" target="_blank">open</a>{{end}}
     </td>
     {{end}}
   </tr>

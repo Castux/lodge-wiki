@@ -103,3 +103,7 @@ pre.lw-diff span { display: block; padding: 0 .4em; min-height: 1.45em; }
 .lw-editor .cm-s-default .cm-quote { color: #6a737d; font-style: italic; }
 .lw-editor .CodeMirror-activeline-background { background: #fbf8ef; }
 .lw-editor .CodeMirror-matchingbracket { background: #e6f0d8; color: inherit !important; }
+
+/* Files maintained by the server */
+.lw-warning { padding: .6em 1em; margin: 0 0 .8em; border-left: 4px solid #c60; background: #fff4e5; }
+.lw-badge { display: inline-block; font-size: .8em; padding: 0 .5em; border-radius: 3px; background: #f3e3c3; color: #6b4a10; }

@@ -1,7 +1,7 @@
 <link rel="stylesheet" href="/_/static/cm.css"><script src="/_/static/cm.js"></script>
 <form method="post" action="/_/edit/{{.ID}}" class="lw-editor{{if .IsFile}} lw-file{{end}}" data-preview="/_/preview/{{.ID}}" data-lang="{{.Lang}}">
   <div class="lw-editor-head">
-    {{if .IsFile}}<h1>{{if .Exists}}Editing{{else}}Creating{{end}} <code>{{.File}}</code></h1>
+    {{if .IsFile}}<h1>{{if .ReadOnly}}Viewing{{else if .Exists}}Editing{{else}}Creating{{end}} <code>{{.File}}</code></h1>
     <p class="lw-quiet">{{.Lang}} file{{if .Exists}} · <a href="/_/history/{{.ID}}">history</a>{{end}} · <a href="{{.URL}}">back to the folder</a></p>
     {{else}}<h1>{{if .Exists}}Editing{{else}}Creating{{end}} <a href="{{.URL}}">{{.ID}}</a></h1>
     <div class="lw-editor-tabs" role="tablist">
@@ -12,6 +12,7 @@
       <a href="/_/static/help.html" target="_blank" class="lw-help">Syntax help</a>
     </div>{{end}}
   </div>
+  {{if .Managed}}<p class="lw-warning"><strong>{{if .ReadOnly}}Read-only:{{else}}Careful:{{end}}</strong> {{.Managed}}</p>{{end}}
   {{if .Error}}<p class="lw-error">{{.Error}}</p>{{end}}
   {{if .Conflict}}
   <div class="lw-conflict">
@@ -28,14 +29,15 @@
     <div class="lw-media-list"></div>
   </div>{{end}}
   <div class="lw-editor-panes lw-mode-write">
-    <textarea name="text" class="lw-text" spellcheck="{{if .IsFile}}false{{else}}true{{end}}" autofocus>{{.Text}}</textarea>
+    <textarea name="text" class="lw-text" spellcheck="{{if .IsFile}}false{{else}}true{{end}}"{{if .ReadOnly}} readonly{{end}} autofocus>{{.Text}}</textarea>
     <div class="lw-preview dokuwiki"><div class="page"></div></div>
   </div>
   <input type="hidden" name="base" value="{{.Base}}">
   <div class="lw-editor-foot">
+    {{if .ReadOnly}}<a href="{{.URL}}" class="lw-button">Back</a>{{else}}
     <input name="summary" class="lw-summary" placeholder="Summary of the change (optional)" value="{{.Summary}}" maxlength="200">
     <button type="submit" class="lw-button lw-primary">Save</button>
     <a href="{{.URL}}" class="lw-button">Cancel</a>
-    <span class="lw-hint">Saving an empty {{if .IsFile}}file{{else}}page{{end}} deletes it. Every save is kept in the history.</span>
+    <span class="lw-hint">Saving an empty {{if .IsFile}}file{{else}}page{{end}} deletes it. Every save is kept in the history.</span>{{end}}
   </div>
 </form>

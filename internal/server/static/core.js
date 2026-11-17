@@ -26,6 +26,7 @@
       CodeMirror.findModeByName = n => (n === "list" || n === "widget" ? find("yaml") : find(n));
       cm = CodeMirror.fromTextArea(text, {
         mode: MODES[form.dataset.lang || "markdown"],
+        readOnly: text.readOnly,
         lineWrapping: !isFile,
         lineNumbers: isFile,
         styleActiveLine: isFile,
