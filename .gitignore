@@ -1,0 +1,14 @@
+# Build output
+/bin/
+*.exe
+
+# Local runtime state
+/tmp/
+*.sqlite
+*.sqlite-*
+
+# Editors and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
