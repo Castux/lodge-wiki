@@ -28,13 +28,14 @@ type Config struct {
 
 // Server serves one wiki.
 type Server struct {
-	cfg     Config
-	store   *wiki.Store
-	render  *render.Renderer
-	auth    *Auth
-	mux     *http.ServeMux
-	ui      *template.Template
-	limiter limiter
+	cfg        Config
+	store      *wiki.Store
+	render     *render.Renderer
+	auth       *Auth
+	mux        *http.ServeMux
+	ui         *template.Template
+	limiter    limiter
+	loginLimit limiter
 }
 
 // New creates a server.
@@ -51,7 +52,7 @@ func New(cfg Config) (*Server, error) {
 		return nil, err
 	}
 	auth.devUser = cfg.DevUser
-	s := &Server{cfg: cfg, store: store, render: &render.Renderer{Store: store}, auth: auth, limiter: limiter{max: 30}}
+	s := &Server{cfg: cfg, store: store, render: &render.Renderer{Store: store}, auth: auth, limiter: limiter{max: 30}, loginLimit: limiter{max: 8}}
 	if s.ui, err = loadUI(); err != nil {
 		return nil, err
 	}
@@ -69,6 +70,10 @@ func (s *Server) routes() {
 	m.HandleFunc("GET /_/login", s.loginForm)
 	m.HandleFunc("POST /_/login", s.login)
 	m.HandleFunc("POST /_/logout", s.logout)
+	m.HandleFunc("GET /_/account", s.accountPage)
+	m.HandleFunc("POST /_/account", s.accountSave)
+	m.Handle("GET /_/users", s.need(RoleAdmin, s.usersPage))
+	m.Handle("POST /_/users", s.need(RoleAdmin, s.usersSave))
 
 	m.Handle("GET /_/edit/", s.need(RoleEditor, s.editForm))
 	m.Handle("POST /_/edit/", s.need(RoleEditor, s.save))
@@ -226,8 +231,13 @@ func (s *Server) can(r *http.Request, role Role) bool {
 func (s *Server) need(role Role, h http.HandlerFunc) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !s.can(r, role) {
-			if s.auth.User(r) == nil {
+			u := s.auth.User(r)
+			if u == nil {
 				http.Redirect(w, r, "/_/login?next="+url.QueryEscape(r.URL.RequestURI()), http.StatusFound)
+				return
+			}
+			if u.Role == RolePending {
+				http.Error(w, "Your account is waiting for an admin to approve it.", http.StatusForbidden)
 				return
 			}
 			http.Error(w, "Forbidden", http.StatusForbidden)

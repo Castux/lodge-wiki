@@ -1,0 +1,47 @@
+<h1>Users</h1>
+<div class="level1">
+{{if .Msg}}<p class="lw-note">{{.Msg}}</p>{{end}}
+{{if .Error}}<p class="lw-error">{{.Error}}</p>{{end}}
+<p class="lw-quiet">{{len .Rows}} accounts{{range $k, $v := .Counts}} · {{$v}} {{$k}}{{end}}.
+<strong>Pending</strong>: cannot see anything yet · <strong>reader</strong>: reads · <strong>editor</strong>: edits pages and data · <strong>admin</strong>: also layouts, widgets and users.</p>
+
+<table class="lw-history lw-users">
+  <thead><tr><th>User</th><th>Role</th><th>Set a new password</th><th></th></tr></thead>
+  <tbody>
+  {{range .Rows}}
+  <tr>
+    <td><strong>{{.Name}}</strong>{{if .RealName}}<br><span class="lw-quiet">{{.RealName}}</span>{{end}}</td>
+    <td>
+      <form method="post" action="/_/users" class="lw-inline">
+        <input type="hidden" name="action" value="role"><input type="hidden" name="name" value="{{.Name}}">
+        <select name="role" onchange="this.form.submit()">{{$r := .RoleName}}{{range $.Roles}}<option{{if eq . $r}} selected{{end}}>{{.}}</option>{{end}}</select>
+      </form>
+    </td>
+    <td>
+      <form method="post" action="/_/users" class="lw-inline">
+        <input type="hidden" name="action" value="password"><input type="hidden" name="name" value="{{.Name}}">
+        <input type="password" name="password" minlength="8" placeholder="new password" autocomplete="new-password" size="14" required>
+        <button class="lw-link">set</button>
+      </form>
+    </td>
+    <td>{{if ne .Name $.Me}}
+      <form method="post" action="/_/users" class="lw-inline" onsubmit="return confirm('Delete the account {{.Name}}? Their edits stay in the history.')">
+        <input type="hidden" name="action" value="delete"><input type="hidden" name="name" value="{{.Name}}">
+        <button class="lw-link">delete</button>
+      </form>{{end}}
+    </td>
+  </tr>
+  {{end}}
+  </tbody>
+</table>
+
+<form method="post" action="/_/users" class="lw-form lw-adduser">
+  <h2>Add an account</h2>
+  <input type="hidden" name="action" value="add">
+  <label>User name <input name="name" required pattern="[^\s:/\\]+" title="No spaces, colons or slashes"></label>
+  <label>Real name (optional) <input name="realname"></label>
+  <label>Password <input type="password" name="password" minlength="8" autocomplete="new-password" required></label>
+  <label>Role <select name="role">{{range .Roles}}<option{{if eq . "editor"}} selected{{end}}>{{.}}</option>{{end}}</select></label>
+  <button class="lw-button lw-primary">Add</button>
+</form>
+</div>

@@ -24,6 +24,12 @@ Then open http://localhost:8080. On the first start it creates an `admin` accoun
 go run . --root ../lodge-data --set-password admin
 ```
 
+To bring over the DokuWiki accounts (everyone keeps their password):
+
+```sh
+go run . --root ../lodge-data --import-users ../public_html/conf/users.auth.php
+```
+
 Accounts, the session key and the scaled-image cache live in a state folder outside the content repo (default `../lodge-state`, set with `--state`). They are never committed.
 
 | Flag | Default | Meaning |

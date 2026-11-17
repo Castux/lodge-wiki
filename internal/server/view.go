@@ -36,6 +36,7 @@ type View struct {
 	Author    string
 	User      string
 	CanEdit   bool
+	IsAdmin   bool
 	Styles    []string // stylesheet URLs, outermost first
 	Layout    string   // URL of the layout folder holding page.html (its script and assets)
 	Head      template.HTML
@@ -149,6 +150,7 @@ func (s *Server) show(w http.ResponseWriter, r *http.Request, v *View) {
 	v.SiteTitle = s.cfg.Title
 	v.URL = wiki.PageURL(v.ID)
 	v.CanEdit = s.can(r, RoleEditor)
+	v.IsAdmin = s.can(r, RoleAdmin)
 	if u := s.auth.User(r); u != nil {
 		v.User = u.Name
 	}
@@ -267,6 +269,10 @@ func (s *Server) tools(v *View) []Tool {
 		)
 	}
 	if v.User != "" {
+		t = append(t, Tool{Name: "account", Label: "Your account", URL: "/_/account", Active: v.Mode == "account"})
+		if v.IsAdmin {
+			t = append(t, Tool{Name: "users", Label: "Users", URL: "/_/users", Active: v.Mode == "users"})
+		}
 		t = append(t, Tool{Name: "logout", Label: "Log out (" + v.User + ")", URL: "/_/logout", Post: true})
 	} else {
 		t = append(t, Tool{Name: "login", Label: "Log in", URL: "/_/login?next=" + v.URL})

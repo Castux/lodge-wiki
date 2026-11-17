@@ -27,6 +27,7 @@ func main() {
 	public := flag.Bool("public", false, "allow reading without logging in")
 	devAs := flag.String("as", "", "DEVELOPMENT ONLY: treat every request as this logged-in account")
 	setPassword := flag.String("set-password", "", "create or update this admin account (password read from stdin) and exit")
+	importUsers := flag.String("import-users", "", "import accounts from a DokuWiki conf/users.auth.php and exit")
 	flag.Parse()
 
 	if *state == "" {
@@ -48,6 +49,14 @@ func main() {
 			log.Fatal(err)
 		}
 		fmt.Fprintln(os.Stderr, "Saved account", *setPassword)
+		return
+	}
+	if *importUsers != "" {
+		added, err := auth.ImportDokuWiki(*importUsers, map[string]bool{"carto": true, "bot": true})
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Printf("Imported %d accounts: %s\n", len(added), strings.Join(added, ", "))
 		return
 	}
 	if !auth.HasUsers() {

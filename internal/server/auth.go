@@ -24,16 +24,25 @@ import (
 type Role int
 
 const (
-	RoleReader Role = iota + 1
+	RolePending Role = iota // registered, not approved yet: no access
+	RoleReader
 	RoleEditor
 	RoleAdmin
 )
 
+// RoleNames are the roles shown in the users page.
+var RoleNames = map[Role]string{RolePending: "pending", RoleReader: "reader", RoleEditor: "editor", RoleAdmin: "admin"}
+
 // User is an account.
 type User struct {
-	Name string `json:"-"`
-	Hash string `json:"hash"`
-	Role Role   `json:"role"`
+	Name     string `json:"-"`
+	Hash     string `json:"hash"` // bcrypt
+	Role     Role   `json:"role"`
+	RealName string `json:"realname,omitempty"`
+	Email    string `json:"email,omitempty"`
+	// Sessions started before this time are refused (set when the
+	// password changes, to log out other devices).
+	Since int64 `json:"since,omitempty"`
 }
 
 // Auth stores accounts in <state>/users.json and signs session cookies
@@ -93,9 +102,22 @@ func (a *Auth) SetPassword(name, password string, role Role) error {
 	}
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	a.users[name] = &User{Name: name, Hash: string(h), Role: role}
+	if u, ok := a.users[name]; ok {
+		u.Hash, u.Role, u.Since = string(h), role, time.Now().Unix()
+	} else {
+		a.users[name] = &User{Name: name, Hash: string(h), Role: role}
+	}
+	return a.saveLocked()
+}
+
+// saveLocked writes users.json; the caller holds a.mu.
+func (a *Auth) saveLocked() error {
 	b, _ := json.MarshalIndent(a.users, "", "  ")
-	return os.WriteFile(a.file, b, 0o600)
+	tmp := a.file + ".tmp"
+	if err := os.WriteFile(tmp, b, 0o600); err != nil {
+		return err
+	}
+	return os.Rename(tmp, a.file)
 }
 
 // Check verifies a password.
@@ -158,7 +180,11 @@ func (a *Auth) User(r *http.Request) *User {
 	name, _ = url.QueryUnescape(name)
 	a.mu.RLock()
 	defer a.mu.RUnlock()
-	return a.users[name]
+	u := a.users[name]
+	if u != nil && u.Since > exp-int64(sessionLife/time.Second) {
+		return nil // started before the last password change
+	}
+	return u
 }
 
 func (s *Server) loginForm(w http.ResponseWriter, r *http.Request) {
@@ -171,13 +197,21 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 	if next == "" || !strings.HasPrefix(next, "/") || strings.HasPrefix(next, "//") {
 		next = "/"
 	}
-	u := s.auth.Check(r.FormValue("user"), r.FormValue("password"))
+	ip := clientIP(r)
+	if !s.loginLimit.allow(ip) {
+		w.WriteHeader(http.StatusTooManyRequests)
+		s.show(w, r, &View{ID: "_login", Title: "Log in", Mode: "login",
+			Content: s.ui_("login.html", map[string]any{"Next": next, "Error": "Too many failed attempts. Wait a minute and try again.", "User": r.FormValue("user")})})
+		return
+	}
+	u := s.auth.Check(strings.ToLower(strings.TrimSpace(r.FormValue("user"))), r.FormValue("password"))
 	if u == nil {
 		w.WriteHeader(http.StatusUnauthorized)
 		s.show(w, r, &View{ID: "_login", Title: "Log in", Mode: "login",
 			Content: s.ui_("login.html", map[string]any{"Next": next, "Error": "Wrong user name or password.", "User": r.FormValue("user")})})
 		return
 	}
+	s.loginLimit.reset(ip)
 	s.auth.Start(w, u)
 	http.Redirect(w, r, next, http.StatusSeeOther)
 }
