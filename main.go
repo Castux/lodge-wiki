@@ -25,6 +25,7 @@ func main() {
 	addr := flag.String("addr", "localhost:8080", "listen address")
 	title := flag.String("title", "The Chasers' Lodge", "site title")
 	public := flag.Bool("public", false, "allow reading without logging in")
+	devAs := flag.String("as", "", "DEVELOPMENT ONLY: treat every request as this logged-in account")
 	setPassword := flag.String("set-password", "", "create or update this admin account (password read from stdin) and exit")
 	flag.Parse()
 
@@ -60,11 +61,14 @@ func main() {
 	}
 
 	start := time.Now()
-	srv, err := server.New(server.Config{Root: *root, State: *state, Title: *title, Public: *public})
+	srv, err := server.New(server.Config{Root: *root, State: *state, Title: *title, Public: *public, DevUser: *devAs})
 	if err != nil {
 		log.Fatal(err)
 	}
 	log.Printf("indexed %d pages in %s", len(srv.Store().Index().Pages), time.Since(start).Round(time.Millisecond))
+	if *devAs != "" {
+		log.Printf("WARNING: --as %s: every visitor is logged in as %s. Never use this on a server.", *devAs, *devAs)
+	}
 	log.Printf("serving %s on http://%s", srv.Store().Root, *addr)
 	log.Fatal(http.ListenAndServe(*addr, srv))
 }

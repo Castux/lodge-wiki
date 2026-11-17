@@ -43,6 +43,8 @@ type Auth struct {
 	key   []byte
 	mu    sync.RWMutex
 	users map[string]*User
+
+	devUser string // development only, see Config.DevUser
 }
 
 const cookieName = "lodge_session"
@@ -128,6 +130,14 @@ func (a *Auth) End(w http.ResponseWriter) {
 
 // User returns the logged-in user, or nil.
 func (a *Auth) User(r *http.Request) *User {
+	if a.devUser != "" {
+		a.mu.RLock()
+		u := a.users[a.devUser]
+		a.mu.RUnlock()
+		if u != nil {
+			return u
+		}
+	}
 	c, err := r.Cookie(cookieName)
 	if err != nil {
 		return nil

@@ -266,7 +266,7 @@ func fixLink(pageID string, t *nethtml.Token, store *wiki.Store) {
 		clean += "#" + frag
 	}
 	setAttr(t, "href", clean)
-	if store != nil && store.Exists(id) {
+	if store != nil && store.Linkable(id) {
 		addClass(t, "wikilink1")
 		if !hasAttr(t, "title") {
 			setAttr(t, "title", id)

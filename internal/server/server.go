@@ -19,10 +19,11 @@ import (
 
 // Config holds the server settings.
 type Config struct {
-	Root   string // content repository
-	State  string // runtime state: users, sessions key, image cache
-	Title  string
-	Public bool // allow reading without logging in
+	Root    string // content repository
+	State   string // runtime state: users, sessions key, image cache
+	Title   string
+	Public  bool   // allow reading without logging in
+	DevUser string // development only: act as this account on every request
 }
 
 // Server serves one wiki.
@@ -49,6 +50,7 @@ func New(cfg Config) (*Server, error) {
 	if err != nil {
 		return nil, err
 	}
+	auth.devUser = cfg.DevUser
 	s := &Server{cfg: cfg, store: store, render: &render.Renderer{Store: store}, auth: auth, limiter: limiter{max: 30}}
 	if s.ui, err = loadUI(); err != nil {
 		return nil, err
@@ -134,6 +136,18 @@ func (s *Server) page(w http.ResponseWriter, r *http.Request) {
 	}
 
 	pg, err := s.store.ReadPage(id)
+	if errors.Is(err, fs.ErrNotExist) && wiki.Name(id) == wiki.StartPage && s.store.HasNamespace(wiki.Namespace(id)) {
+		// A namespace without a start page: list what it holds.
+		ns := wiki.Namespace(id)
+		title := strings.ReplaceAll(wiki.Name(ns), "-", " ")
+		if title != "" {
+			title = strings.ToUpper(title[:1]) + title[1:]
+		}
+		body := "# " + title + "\n\n```list\nns: /" + ns + "\nnamespaces: true\n```\n"
+		res := s.render.Render(wiki.ParsePage(id, []byte(body)))
+		s.show(w, r, &View{ID: id, Title: title, Mode: "show", Content: template.HTML(res.HTML)})
+		return
+	}
 	if errors.Is(err, fs.ErrNotExist) {
 		w.WriteHeader(http.StatusNotFound)
 		s.show(w, r, &View{ID: id, Title: wiki.Name(id), Mode: "missing",

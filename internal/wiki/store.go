@@ -309,3 +309,26 @@ func (idx *Index) Children(ns string) (pages []*PageInfo, subns []string) {
 	sort.Strings(subns)
 	return
 }
+
+// HasNamespace reports whether any page lives under a namespace.
+func (s *Store) HasNamespace(ns string) bool {
+	if ns == "" {
+		return true
+	}
+	prefix := ns + "/"
+	for id := range s.Index().Pages {
+		if strings.HasPrefix(id, prefix) {
+			return true
+		}
+	}
+	return false
+}
+
+// Linkable reports whether a link to id leads somewhere: an existing page,
+// or the start page of a namespace that has pages (shown as a listing).
+func (s *Store) Linkable(id string) bool {
+	if s.Exists(id) {
+		return true
+	}
+	return Name(id) == StartPage && s.HasNamespace(Namespace(id))
+}

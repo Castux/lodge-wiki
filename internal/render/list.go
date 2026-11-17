@@ -27,6 +27,8 @@ type ListOptions struct {
 	Tree       bool     `yaml:"tree"`
 	Heading    string   `yaml:"heading"`
 	NSHeading  string   `yaml:"namespaces_heading"`
+	Label      string   `yaml:"label"` // e.g. "{title} ({user})"; also {id}, {date}
+	Dates      bool     `yaml:"dates"` // show the last modification date
 }
 
 type listItem struct {
@@ -147,8 +149,16 @@ func (pc *pageCtx) columns(b *strings.Builder, items []listItem, o ListOptions) 
 		}
 		b.WriteString(">")
 		for _, it := range items[lo:hi] {
-			fmt.Fprintf(b, `<li><a href="%s" title="%s">%s</a></li>`,
-				html.EscapeString(wiki.PageURL(it.id)), html.EscapeString(it.id), html.EscapeString(it.title))
+			label := it.title
+			if o.Label != "" {
+				label = itemLabel(o.Label, it)
+			}
+			date := ""
+			if o.Dates && it.info != nil && !it.info.Modified.IsZero() {
+				date = ` <span class="nspagesdate">` + it.info.Modified.Format("2006/01/02") + `</span>`
+			}
+			fmt.Fprintf(b, `<li><a href="%s" title="%s">%s</a>%s</li>`,
+				html.EscapeString(wiki.PageURL(it.id)), html.EscapeString(it.id), html.EscapeString(label), date)
 		}
 		fmt.Fprintf(b, "</%s></div>", tag)
 	}
@@ -252,4 +262,17 @@ func leadingNum(s string) (int, string) {
 	}
 	n, _ := strconv.Atoi(s[:i])
 	return n, s[i:]
+}
+
+// itemLabel fills a label template: {title}, {id}, {name}, {user} (last
+// author) and {date} (last modified).
+func itemLabel(tpl string, it listItem) string {
+	user, date := "", ""
+	if it.info != nil {
+		user = it.info.Author
+		if !it.info.Modified.IsZero() {
+			date = it.info.Modified.Format("2006/01/02")
+		}
+	}
+	return strings.NewReplacer("{title}", it.title, "{id}", it.id, "{name}", wiki.Name(it.id), "{user}", user, "{date}", date).Replace(tpl)
 }
