@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -41,45 +42,82 @@ type Revision struct {
 	Message string
 }
 
-// FileHistory is the first and last commit of a file.
+var dokuwikiMove = regexp.MustCompile(`Page moved (?:and renamed )?from (\S+) to `)
+
+// FileHistory is what the history says about one file.
 type FileHistory struct {
 	Created, Modified time.Time
-	Author            string
+	Creator           string // author of the commit that created it
+	Author            string // author of the last commit
 }
 
-// FileTimes walks the whole history once and returns, per file, when it
-// was created and last modified, and by whom.
+// FileTimes walks the whole history once, oldest first, and returns per
+// file when it was created and by whom, and when it was last changed and
+// by whom. Renames (git mv, and the wiki's own moves) carry the creator
+// and creation date along. So do the moves in the history imported from
+// DokuWiki, which were a deletion and a creation: their commit message
+// says "↷ Page moved from old:id to new:id".
 func (g *Git) FileTimes() (map[string]FileHistory, error) {
-	out, err := g.run(nil, nil, "log", "--format=\x01%at\x02%an", "--name-only", "--no-renames")
+	out, err := g.run(nil, nil, "log", "--reverse", "-M", "--name-status", "--format=\x01%at\x02%an\x02%s")
 	if err != nil {
 		return nil, err
 	}
 	res := map[string]FileHistory{}
+	deleted := map[string]FileHistory{} // for moves imported from DokuWiki
 	var when time.Time
-	var author string
+	var author, movedFrom string
 	sc := bufio.NewScanner(bytes.NewReader(out))
 	sc.Buffer(make([]byte, 1<<20), 1<<20)
 	for sc.Scan() {
 		line := sc.Text()
 		if strings.HasPrefix(line, "\x01") {
-			parts := strings.SplitN(line[1:], "\x02", 2)
+			parts := strings.SplitN(line[1:], "\x02", 3)
 			sec, _ := strconv.ParseInt(parts[0], 10, 64)
 			when = time.Unix(sec, 0)
-			author = ""
+			author, movedFrom = "", ""
 			if len(parts) > 1 {
 				author = parts[1]
 			}
+			if len(parts) > 2 {
+				if m := dokuwikiMove.FindStringSubmatch(parts[2]); m != nil {
+					movedFrom = strings.ReplaceAll(m[1], ":", "/") + ".md"
+				}
+			}
 			continue
 		}
-		if line == "" {
+		f := strings.Split(line, "\t")
+		if len(f) < 2 || f[0] == "" {
 			continue
 		}
-		h, ok := res[line]
-		if !ok {
-			h = FileHistory{Modified: when, Author: author}
+		switch path, status := f[len(f)-1], f[0][0]; status {
+		case 'D':
+			deleted[path] = res[path]
+			delete(res, path)
+		case 'R', 'C':
+			h, ok := res[f[1]]
+			if !ok {
+				h = FileHistory{Created: when, Creator: author}
+			}
+			if status == 'R' {
+				delete(res, f[1])
+			}
+			h.Modified, h.Author = when, author
+			res[path] = h
+		default: // A, M, T
+			h, ok := res[path]
+			if !ok {
+				h = FileHistory{Created: when, Creator: author}
+				if movedFrom != "" && movedFrom != path {
+					if prev, ok := res[movedFrom]; ok && prev.Creator != "" {
+						h.Created, h.Creator = prev.Created, prev.Creator
+					} else if prev, ok := deleted[movedFrom]; ok && prev.Creator != "" {
+						h.Created, h.Creator = prev.Created, prev.Creator
+					}
+				}
+			}
+			h.Modified, h.Author = when, author
+			res[path] = h
 		}
-		h.Created = when // log is newest first: the last seen is the oldest
-		res[line] = h
 	}
 	return res, sc.Err()
 }

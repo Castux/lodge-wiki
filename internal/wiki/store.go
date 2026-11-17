@@ -163,6 +163,7 @@ type PageInfo struct {
 	Created  time.Time
 	Modified time.Time
 	Author   string // last author
+	Creator  string // who created the page
 	Links    []string
 	Image    string   // first image src, for picture listings
 	Media    []string // media files used, as paths under _media/
@@ -253,7 +254,7 @@ func (s *Store) Reindex() error {
 	if hist, err := s.Git.FileTimes(); err == nil {
 		for id, p := range idx.Pages {
 			if h, ok := hist[id+".md"]; ok {
-				p.Created, p.Modified, p.Author = h.Created, h.Modified, h.Author
+				p.Created, p.Modified, p.Author, p.Creator = h.Created, h.Modified, h.Author, h.Creator
 			}
 		}
 	}
@@ -282,8 +283,9 @@ func (s *Store) UpdateIndex(id, author string, when time.Time) {
 	} else {
 		p := ParsePage(id, raw)
 		info := &PageInfo{ID: id, Title: p.Title, Meta: p.Meta, Size: len(raw), Modified: when, Author: author, Created: when}
+		info.Creator = author
 		if prev, ok := old.Pages[id]; ok && !prev.Created.IsZero() {
-			info.Created = prev.Created
+			info.Created, info.Creator = prev.Created, prev.Creator
 		}
 		info.Links, info.Image = scanLinks(id, p.Body)
 		info.Media = scanMedia(p.Body)

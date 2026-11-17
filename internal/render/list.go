@@ -256,15 +256,16 @@ func leadingNum(s string) (int, string) {
 	return n, s[i:]
 }
 
-// itemLabel fills a label template: {title}, {id}, {name}, {user} (last
-// author) and {date} (last modified).
+// itemLabel fills a label template: {title}, {id}, {name}, {user} (who
+// created the page, as nspages did), {editor} (last author) and {date}
+// (last modified).
 func itemLabel(tpl string, it listItem) string {
-	user, date := "", ""
+	user, editor, date := "", "", ""
 	if it.info != nil {
-		user = it.info.Author
+		user, editor = it.info.Creator, it.info.Author
 		if !it.info.Modified.IsZero() {
 			date = it.info.Modified.Format("2006/01/02")
 		}
 	}
-	return strings.NewReplacer("{title}", it.title, "{id}", it.id, "{name}", wiki.Name(it.id), "{user}", user, "{date}", date).Replace(tpl)
+	return strings.NewReplacer("{title}", it.title, "{id}", it.id, "{name}", wiki.Name(it.id), "{user}", user, "{editor}", editor, "{date}", date).Replace(tpl)
 }
