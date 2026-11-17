@@ -3,10 +3,13 @@ package server
 import (
 	"crypto/sha1"
 	"encoding/hex"
+	"encoding/json"
 	"image"
 	"image/gif"
 	"image/jpeg"
 	"image/png"
+	"io"
+	"log"
 	"net/http"
 	"os"
 	"path"
@@ -16,6 +19,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Castux/lodge-wiki/internal/wiki"
 	"golang.org/x/image/draw"
 	_ "golang.org/x/image/webp"
 )
@@ -168,4 +172,120 @@ func (s *Server) static(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Write(b)
+}
+
+var mediaExts = map[string]bool{
+	".jpg": true, ".jpeg": true, ".png": true, ".gif": true, ".webp": true, ".svg": true,
+	".pdf": true, ".mp3": true, ".wav": true, ".ogg": true, ".m4a": true, ".txt": true,
+}
+
+// mediaNS validates a media namespace ("foolslanding/story").
+func mediaNS(ns string) (string, bool) {
+	ns = strings.Trim(path.Clean("/"+ns), "/")
+	if strings.Contains(ns, "..") {
+		return "", false
+	}
+	for _, seg := range strings.Split(ns, "/") {
+		if strings.HasPrefix(seg, ".") || strings.HasPrefix(seg, "_") {
+			return "", false
+		}
+	}
+	return ns, true
+}
+
+// mediaList returns the files and folders of a media namespace as JSON.
+func (s *Server) mediaList(w http.ResponseWriter, r *http.Request) {
+	ns, ok := mediaNS(r.URL.Query().Get("ns"))
+	if !ok {
+		http.Error(w, "bad namespace", http.StatusBadRequest)
+		return
+	}
+	type file struct {
+		Name  string `json:"name"`
+		URL   string `json:"url"`
+		Size  int64  `json:"size"`
+		Image bool   `json:"image"`
+	}
+	out := struct {
+		NS      string   `json:"ns"`
+		Folders []string `json:"folders"`
+		Files   []file   `json:"files"`
+	}{NS: ns, Folders: []string{}, Files: []file{}}
+	dir := s.store.File(path.Join("_media", ns))
+	entries, _ := os.ReadDir(dir)
+	for _, e := range entries {
+		if strings.HasPrefix(e.Name(), ".") {
+			continue
+		}
+		if e.IsDir() {
+			out.Folders = append(out.Folders, e.Name())
+			continue
+		}
+		info, err := e.Info()
+		if err != nil {
+			continue
+		}
+		ext := strings.ToLower(path.Ext(e.Name()))
+		out.Files = append(out.Files, file{e.Name(), "/" + path.Join("_media", ns, e.Name()), info.Size(),
+			ext == ".jpg" || ext == ".jpeg" || ext == ".png" || ext == ".gif" || ext == ".webp" || ext == ".svg"})
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(out)
+}
+
+// mediaUpload stores an uploaded file in _media/<ns>/. Media files are
+// not versioned in git; an existing file is only replaced with overwrite=1.
+func (s *Server) mediaUpload(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, 64<<20)
+	if err := r.ParseMultipartForm(16 << 20); err != nil {
+		http.Error(w, "upload too large or malformed: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	ns, ok := mediaNS(r.FormValue("ns"))
+	if !ok {
+		http.Error(w, "bad namespace", http.StatusBadRequest)
+		return
+	}
+	f, hdr, err := r.FormFile("file")
+	if err != nil {
+		http.Error(w, "missing file", http.StatusBadRequest)
+		return
+	}
+	defer f.Close()
+	ext := strings.ToLower(path.Ext(hdr.Filename))
+	if !mediaExts[ext] {
+		http.Error(w, "file type not allowed: "+ext, http.StatusBadRequest)
+		return
+	}
+	name := wiki.CleanID(strings.TrimSuffix(hdr.Filename, path.Ext(hdr.Filename)))
+	name = strings.ReplaceAll(name, "/", "-") + ext
+	rel := path.Join("_media", ns, name)
+	full := s.store.File(rel)
+	if _, err := os.Stat(full); err == nil && r.FormValue("overwrite") != "1" {
+		http.Error(w, "a file named "+name+" already exists here", http.StatusConflict)
+		return
+	}
+	if err := os.MkdirAll(filepath.Dir(full), 0o755); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	tmp := full + ".upload"
+	out, err := os.Create(tmp)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	_, err = io.Copy(out, f)
+	out.Close()
+	if err == nil {
+		err = os.Rename(tmp, full)
+	}
+	if err != nil {
+		os.Remove(tmp)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	log.Printf("upload %s by %s (%d bytes)", rel, s.user(r), hdr.Size)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"url": "/" + rel, "name": name})
 }

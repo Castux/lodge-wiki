@@ -32,7 +32,7 @@ func (s *Server) editForm(w http.ResponseWriter, r *http.Request) {
 	}
 	s.show(w, r, &View{ID: id, Title: "Editing " + s.titleOr(id), Mode: "edit", Exists: exists,
 		Content: s.ui_("edit.html", map[string]any{
-			"ID": id, "URL": wiki.PageURL(id), "Text": string(raw), "Base": s.store.Git.Head(file), "Exists": exists, "IsData": isData(id),
+			"ID": id, "URL": wiki.PageURL(id), "Text": string(raw), "Base": s.store.Git.Head(file), "Exists": exists, "IsData": isData(id), "NS": wiki.Namespace(id),
 		})})
 }
 

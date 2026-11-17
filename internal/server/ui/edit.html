@@ -5,6 +5,7 @@
       <button type="button" data-tab="write" class="lw-tab lw-active">Write</button>
       <button type="button" data-tab="preview" class="lw-tab">Preview</button>
       <button type="button" data-tab="split" class="lw-tab">Side by side</button>
+      <button type="button" class="lw-tab lw-media-btn" title="Insert an image or file">Images…</button>
       <a href="/_/static/help.html" target="_blank" class="lw-help">Syntax help</a>
     </div>{{else}}<p class="lw-quiet">Data file (JSON), used by widgets.</p>{{end}}
   </div>
@@ -15,6 +16,14 @@
     <textarea readonly rows="10">{{.Conflict}}</textarea>
   </div>
   {{end}}
+  {{if not .IsData}}<div class="lw-media" hidden data-ns="{{.NS}}">
+    <div class="lw-media-bar">
+      <span>Folder: <input class="lw-media-ns" value="{{.NS}}" size="30"></span>
+      <label class="lw-button">Upload… <input type="file" class="lw-media-file" hidden multiple></label>
+      <span class="lw-media-msg lw-quiet">Click an image to insert it at the cursor.</span>
+    </div>
+    <div class="lw-media-list"></div>
+  </div>{{end}}
   <div class="lw-editor-panes lw-mode-write">
     <textarea name="text" class="lw-text" spellcheck="true" autofocus>{{.Text}}</textarea>
     <div class="lw-preview dokuwiki"><div class="page"></div></div>

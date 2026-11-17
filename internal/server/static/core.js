@@ -69,3 +69,75 @@
     }
   });
 })();
+
+// Editor: image picker and upload (files go to _media/<folder>/).
+(function () {
+  "use strict";
+  const box = document.querySelector(".lw-media");
+  const btn = document.querySelector(".lw-media-btn");
+  const text = document.querySelector(".lw-text");
+  if (!box || !btn || !text) return;
+  const nsInput = box.querySelector(".lw-media-ns");
+  const list = box.querySelector(".lw-media-list");
+  const msg = box.querySelector(".lw-media-msg");
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+
+  function insert(file) {
+    const alt = file.name.replace(/\.[^.]+$/, "").replace(/[-_]/g, " ");
+    const snippet = file.image ? `![${alt}](${file.url})` : `[${file.name}](${file.url})`;
+    const s = text.selectionStart, e = text.selectionEnd;
+    text.setRangeText(snippet, s, e, "end");
+    text.focus();
+    text.dispatchEvent(new Event("input"));
+  }
+
+  async function load() {
+    const ns = nsInput.value.trim().replace(/^\/+|\/+$/g, "");
+    list.innerHTML = "Loading…";
+    const res = await fetch("/_/media?ns=" + encodeURIComponent(ns), { credentials: "same-origin" });
+    if (!res.ok) { list.textContent = "Cannot list this folder."; return; }
+    const data = await res.json();
+    const parts = [];
+    if (ns) parts.push(`<button type="button" class="lw-media-folder" data-ns="${esc(ns.split("/").slice(0, -1).join("/"))}">⬑ up</button>`);
+    for (const f of data.folders) parts.push(`<button type="button" class="lw-media-folder" data-ns="${esc((ns ? ns + "/" : "") + f)}">📁 ${esc(f)}</button>`);
+    for (const f of data.files) {
+      parts.push(`<button type="button" class="lw-media-item" title="${esc(f.name)}" data-file='${esc(JSON.stringify(f))}'>` +
+        (f.image ? `<img src="${esc(f.url)}?w=110" loading="lazy" alt="">` : `<span class="lw-media-icon">📄</span>`) +
+        `<span>${esc(f.name)}</span></button>`);
+    }
+    list.innerHTML = parts.join("") || "<p class='lw-quiet'>No files in this folder yet.</p>";
+  }
+
+  list.addEventListener("click", ev => {
+    const folder = ev.target.closest(".lw-media-folder");
+    if (folder) { nsInput.value = folder.dataset.ns; load(); return; }
+    const item = ev.target.closest(".lw-media-item");
+    if (item) insert(JSON.parse(item.dataset.file));
+  });
+  nsInput.addEventListener("change", load);
+  btn.addEventListener("click", () => {
+    box.hidden = !box.hidden;
+    btn.classList.toggle("lw-active", !box.hidden);
+    if (!box.hidden) load();
+  });
+
+  box.querySelector(".lw-media-file").addEventListener("change", async ev => {
+    for (const file of ev.target.files) {
+      msg.textContent = "Uploading " + file.name + "…";
+      const fd = new FormData();
+      fd.append("ns", nsInput.value.trim());
+      fd.append("file", file);
+      let res = await fetch("/_/media", { method: "POST", body: fd, credentials: "same-origin" });
+      if (res.status === 409 && confirm((await res.text()) + ". Replace it?")) {
+        fd.append("overwrite", "1");
+        res = await fetch("/_/media", { method: "POST", body: fd, credentials: "same-origin" });
+      }
+      if (!res.ok) { msg.textContent = "Upload failed: " + (await res.text()); continue; }
+      const info = await res.json();
+      insert({ name: info.name, url: info.url, image: /\.(jpe?g|png|gif|webp|svg)$/i.test(info.name) });
+      msg.textContent = "Uploaded " + info.name + " and inserted it.";
+    }
+    ev.target.value = "";
+    load();
+  });
+})();

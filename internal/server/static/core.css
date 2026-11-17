@@ -64,3 +64,15 @@ pre.lw-diff span { display: block; padding: 0 .4em; }
 .lw-site { font-weight: bold; font-size: 1.3em; text-decoration: none; }
 .lw-tools { display: flex; gap: .8em; flex-wrap: wrap; margin-left: auto; }
 .lw-pageinfo { margin: 2em 0; color: #777; font-size: .85em; border-top: 1px solid #ddd; padding-top: .5em; }
+
+/* Image picker */
+.lw-media { border: 1px solid #ccc5b6; border-radius: 4px; background: rgba(255,255,255,.7); padding: .5em; margin-bottom: .6em; }
+.lw-media-bar { display: flex; flex-wrap: wrap; gap: .6em; align-items: center; margin-bottom: .5em; }
+.lw-media-ns { font: inherit; padding: .2em .4em; }
+.lw-media-list { display: flex; flex-wrap: wrap; gap: .4em; max-height: 18em; overflow: auto; }
+.lw-media-folder { font: inherit; padding: .3em .6em; border: 1px solid #ccc5b6; background: #f6f4ee; border-radius: 4px; cursor: pointer; }
+.lw-media-item { width: 120px; padding: 4px; border: 1px solid #ddd6c8; background: #fff; border-radius: 4px; cursor: pointer; display: flex; flex-direction: column; align-items: center; font-size: 11px; }
+.lw-media-item:hover { border-color: #660000; }
+.lw-media-item img { width: 110px; height: 80px; object-fit: cover; }
+.lw-media-item span { width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lw-media-icon { font-size: 40px; line-height: 80px; }
