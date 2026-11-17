@@ -75,6 +75,7 @@ func main() {
 		log.Fatal(err)
 	}
 	log.Printf("indexed %d pages in %s", len(srv.Store().Index().Pages), time.Since(start).Round(time.Millisecond))
+	go srv.SyncMediaManifest()
 	if *devAs != "" {
 		log.Printf("WARNING: --as %s: every visitor is logged in as %s. Never use this on a server.", *devAs, *devAs)
 	}
