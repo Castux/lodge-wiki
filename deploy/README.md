@@ -42,8 +42,10 @@ It pulls the latest code, rebuilds, merges content pushed to the data repo from 
 | Session key and image cache (disposable) | `/srv/lodge/lodge-state` |
 | The program | `/usr/local/bin/lodge-wiki` |
 | Service (sandboxed, restarts on failure) | `/etc/systemd/system/lodge-wiki.service` |
-| HTTPS (automatic certificate) | `/etc/caddy/Caddyfile` |
+| HTTPS (automatic certificate) | `/etc/caddy/sites/lodge-wiki.caddy`, imported by `/etc/caddy/Caddyfile` |
 
 With `PUSH=yes` every change is pushed to the data repo a few seconds later, so GitHub always holds the pages, data, layouts and accounts. Media needs its own backup (see the to-do list in `PLAN.md`).
+
+**Other services on the same machine.** The wiki only adds its own site file in `/etc/caddy/sites/` and one `import sites/*` line to the Caddyfile (or replaces Caddy's stock placeholder page); other sites are left as they are. The result is checked with `caddy validate` before Caddy is reloaded (not restarted), and the previous files are restored if it fails. If the wiki's local port (`LISTEN`) is taken by another program, the script stops and says so.
 
 Useful commands: `journalctl -u lodge-wiki -f` (logs), `sudo systemctl restart lodge-wiki`, `systemctl status lodge-wiki`.

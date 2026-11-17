@@ -209,16 +209,35 @@ if [ "$(cat "$UNIT" 2>/dev/null)" != "$NEW_UNIT" ]; then
   systemctl daemon-reload
   note "wrote $UNIT"
 fi
+# Another service may already use the port (several services on one machine).
+PORT="${LISTEN##*:}"
+if ss -ltnpH "sport = :$PORT" 2>/dev/null | grep -v '"lodge-wiki"' | grep -q .; then
+  ss -ltnpH "sport = :$PORT" | grep -v '"lodge-wiki"'
+  die "port $PORT is already used by another program (above): choose another LISTEN in $CONF"
+fi
 systemctl enable -q lodge-wiki
 systemctl restart lodge-wiki
 note "restarted (flags: ${FLAGS[*]:6})"
 
 # ---------- web server ----------
+#
+# The wiki's site lives in its own file, imported by the main Caddyfile, so
+# Caddy can serve other sites on the same machine. Other sites are never
+# edited, the result is validated before Caddy reloads (restoring the old
+# files if it does not validate), and Caddy is reloaded, not restarted.
+
+# is_stock_caddyfile: the file holds only the placeholder site that the
+# caddy package installs (comments and spacing aside).
+is_stock_caddyfile() {
+  [ "$(sed -e 's/#.*//' "$1" | tr -d ' \t\n')" = ':80{root*/usr/share/caddyfile_server}' ]
+}
 
 if [ -n "$DOMAIN" ]; then
   say "Caddy (HTTPS for $DOMAIN)"
-  CADDYFILE=/etc/caddy/Caddyfile
-  NEW_CADDY="$(cat <<EOF
+  CADDY_DIR=/etc/caddy
+  CADDYFILE="$CADDY_DIR/Caddyfile"
+  SITE="$CADDY_DIR/sites/lodge-wiki.caddy"
+  NEW_SITE="$(cat <<EOF
 # Written by lodge-wiki/deploy/setup.sh: edit deploy/lodge.conf and rerun instead.
 $DOMAIN {
 	encode zstd gzip
@@ -229,18 +248,48 @@ $DOMAIN {
 }
 EOF
 )"
-  if [ -f "$CADDYFILE" ] && ! grep -q 'lodge-wiki/deploy/setup.sh' "$CADDYFILE" && ! grep -q '/usr/share/caddy' "$CADDYFILE"; then
-    warn "$CADDYFILE has other sites; add this block yourself:"
-    printf '%s\n' "$NEW_CADDY"
-  elif [ "$(cat "$CADDYFILE" 2>/dev/null)" != "$NEW_CADDY" ]; then
-    printf '%s\n' "$NEW_CADDY" > "$CADDYFILE"
-    systemctl reload caddy 2>/dev/null || systemctl restart caddy
-    note "wrote $CADDYFILE"
+  install -d "$CADDY_DIR/sites"
+  BACKUP="$(mktemp -d)"
+  cp -a "$CADDYFILE" "$BACKUP/Caddyfile" 2>/dev/null || true
+  cp -a "$SITE" "$BACKUP/site" 2>/dev/null || true
+  CHANGED=no
+
+  if [ "$(cat "$SITE" 2>/dev/null)" != "$NEW_SITE" ]; then
+    printf '%s\n' "$NEW_SITE" > "$SITE"; CHANGED=yes
+    note "wrote $SITE"
+  fi
+
+  IMPORT="import sites/*"
+  if [ ! -f "$CADDYFILE" ] || is_stock_caddyfile "$CADDYFILE"; then
+    # No Caddyfile, or only Caddy's stock placeholder page: just the import.
+    printf '# Sites are in %s/sites/, one file per service.\n%s\n' "$CADDY_DIR" "$IMPORT" > "$CADDYFILE"; CHANGED=yes
+    note "wrote $CADDYFILE (imports $CADDY_DIR/sites/*)"
+  elif ! grep -qE '^\s*import\s+(/etc/caddy/)?sites/\*' "$CADDYFILE"; then
+    printf '\n# Added by lodge-wiki/deploy/setup.sh: one file per service in %s/sites/.\n%s\n' "$CADDY_DIR" "$IMPORT" >> "$CADDYFILE"; CHANGED=yes
+    note "added '$IMPORT' to $CADDYFILE (your other sites are untouched)"
+  fi
+
+  if [ "$CHANGED" = yes ]; then
+    if ! caddy validate --config "$CADDYFILE" --adapter caddyfile >/tmp/caddy-validate.log 2>&1; then
+      cp -a "$BACKUP/Caddyfile" "$CADDYFILE" 2>/dev/null || rm -f "$CADDYFILE"
+      if [ -f "$BACKUP/site" ]; then cp -a "$BACKUP/site" "$SITE"; else rm -f "$SITE"; fi
+      tail -n 15 /tmp/caddy-validate.log
+      die "Caddy rejected the configuration (above); the previous files are restored"
+    fi
+    if systemctl is-active -q caddy; then
+      systemctl reload caddy && note "reloaded Caddy"
+    elif systemctl list-unit-files caddy.service >/dev/null 2>&1 && systemctl list-unit-files caddy.service | grep -q caddy; then
+      systemctl enable -q --now caddy && note "started Caddy"
+    else
+      warn "Caddy is not run by systemd here: make it import $SITE, then reload it yourself"
+    fi
   else
     note "configuration unchanged"
   fi
+  rm -rf "$BACKUP"
+
   if command -v ufw >/dev/null && ufw status | grep -q 'Status: active'; then
-    ufw allow 80/tcp >/dev/null && ufw allow 443/tcp >/dev/null && note "firewall: opened 80 and 443"
+    ufw allow 80/tcp >/dev/null && ufw allow 443/tcp >/dev/null && note "firewall: 80 and 443 open"
   fi
 fi
 
