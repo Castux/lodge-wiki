@@ -1,22 +1,24 @@
-<form method="post" action="/_/edit/{{.ID}}" class="lw-editor{{if .IsData}} lw-data{{end}}" data-preview="/_/preview/{{.ID}}">
+<form method="post" action="/_/edit/{{.ID}}" class="lw-editor{{if .IsFile}} lw-file{{end}}" data-preview="/_/preview/{{.ID}}">
   <div class="lw-editor-head">
-    <h1>{{if .Exists}}Editing{{else}}Creating{{end}} <a href="{{.URL}}">{{.ID}}</a></h1>
-    {{if not .IsData}}<div class="lw-editor-tabs" role="tablist">
+    {{if .IsFile}}<h1>{{if .Exists}}Editing{{else}}Creating{{end}} <code>{{.File}}</code></h1>
+    <p class="lw-quiet">{{.Lang}} file{{if .Exists}} · <a href="/_/history/{{.ID}}">history</a>{{end}} · <a href="{{.URL}}">back to the folder</a></p>
+    {{else}}<h1>{{if .Exists}}Editing{{else}}Creating{{end}} <a href="{{.URL}}">{{.ID}}</a></h1>
+    <div class="lw-editor-tabs" role="tablist">
       <button type="button" data-tab="write" class="lw-tab lw-active">Write</button>
       <button type="button" data-tab="preview" class="lw-tab">Preview</button>
       <button type="button" data-tab="split" class="lw-tab">Side by side</button>
       <button type="button" class="lw-tab lw-media-btn" title="Insert an image or file">Images…</button>
       <a href="/_/static/help.html" target="_blank" class="lw-help">Syntax help</a>
-    </div>{{else}}<p class="lw-quiet">Data file (JSON), used by widgets.</p>{{end}}
+    </div>{{end}}
   </div>
   {{if .Error}}<p class="lw-error">{{.Error}}</p>{{end}}
   {{if .Conflict}}
   <div class="lw-conflict">
-    <p><strong>Someone else saved this page while you were editing.</strong> Your text is below; theirs is shown here. Merge what you need, then save again.</p>
+    <p><strong>Someone else saved this {{if .IsFile}}file{{else}}page{{end}} while you were editing.</strong> Your text is below; theirs is shown here. Merge what you need, then save again.</p>
     <textarea readonly rows="10">{{.Conflict}}</textarea>
   </div>
   {{end}}
-  {{if not .IsData}}<div class="lw-media" hidden data-ns="{{.NS}}">
+  {{if not .IsFile}}<div class="lw-media" hidden data-ns="{{.NS}}">
     <div class="lw-media-bar">
       <span>Folder: <input class="lw-media-ns" value="{{.NS}}" size="30"></span>
       <label class="lw-button">Upload… <input type="file" class="lw-media-file" hidden multiple></label>
@@ -25,7 +27,7 @@
     <div class="lw-media-list"></div>
   </div>{{end}}
   <div class="lw-editor-panes lw-mode-write">
-    <textarea name="text" class="lw-text" spellcheck="true" autofocus>{{.Text}}</textarea>
+    <textarea name="text" class="lw-text" spellcheck="{{if .IsFile}}false{{else}}true{{end}}" autofocus>{{.Text}}</textarea>
     <div class="lw-preview dokuwiki"><div class="page"></div></div>
   </div>
   <input type="hidden" name="base" value="{{.Base}}">
@@ -33,6 +35,6 @@
     <input name="summary" class="lw-summary" placeholder="Summary of the change (optional)" value="{{.Summary}}" maxlength="200">
     <button type="submit" class="lw-button lw-primary">Save</button>
     <a href="{{.URL}}" class="lw-button">Cancel</a>
-    <span class="lw-hint">Saving an empty {{if .IsData}}file{{else}}page{{end}} deletes it.</span>
+    <span class="lw-hint">Saving an empty {{if .IsFile}}file{{else}}page{{end}} deletes it. Every save is kept in the history.</span>
   </div>
 </form>

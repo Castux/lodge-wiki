@@ -23,94 +23,6 @@ func (s *Server) user(r *http.Request) string {
 	return "anonymous"
 }
 
-func (s *Server) editForm(w http.ResponseWriter, r *http.Request) {
-	id := idFrom(r, "/_/edit/")
-	file := id + ".md"
-	raw, err := os.ReadFile(s.store.PageFile(id))
-	exists := err == nil
-	if !exists {
-		raw = []byte("# " + strings.ReplaceAll(wiki.Name(id), "-", " ") + "\n\n")
-	}
-	s.show(w, r, &View{ID: id, Title: "Editing " + s.titleOr(id), Mode: "edit", Exists: exists,
-		Content: s.ui_("edit.html", map[string]any{
-			"ID": id, "URL": wiki.PageURL(id), "Text": string(raw), "Base": s.store.Git.Head(file), "Exists": exists, "IsData": isData(id), "NS": wiki.Namespace(id),
-		})})
-}
-
-func (s *Server) titleOr(id string) string {
-	if t := s.store.Title(id); t != "" {
-		return t
-	}
-	return wiki.Name(id)
-}
-
-func (s *Server) save(w http.ResponseWriter, r *http.Request) {
-	id := idFrom(r, "/_/edit/")
-	if id == "" || strings.HasPrefix(id, "_") {
-		http.Error(w, "bad page id", http.StatusBadRequest)
-		return
-	}
-	text := strings.ReplaceAll(r.FormValue("text"), "\r\n", "\n")
-	summary := strings.TrimSpace(r.FormValue("summary"))
-	var content []byte
-	if strings.TrimSpace(text) != "" {
-		if !strings.HasSuffix(text, "\n") {
-			text += "\n"
-		}
-		content = []byte(text)
-	}
-	if isData(id) && content != nil && !json.Valid(content) {
-		w.WriteHeader(http.StatusBadRequest)
-		s.show(w, r, &View{ID: id, Title: "Editing " + id, Mode: "edit", Exists: true,
-			Content: s.ui_("edit.html", map[string]any{
-				"ID": id, "URL": wiki.PageURL(id), "Text": text, "Base": r.FormValue("base"), "Exists": true,
-				"Summary": summary, "IsData": true, "Error": "This is not valid JSON, so it was not saved. Check for missing commas or quotes.",
-			})})
-		return
-	}
-	msg := summary
-	if msg == "" {
-		if content == nil {
-			msg = "delete " + id
-		} else {
-			msg = "edit " + id
-		}
-	}
-	_, err := s.store.Git.Write(fileOf(id), content, r.FormValue("base"), s.user(r), msg)
-	var conflict *wiki.ErrConflict
-	if errors.As(err, &conflict) {
-		w.WriteHeader(http.StatusConflict)
-		theirs, _ := os.ReadFile(s.store.File(fileOf(id)))
-		s.show(w, r, &View{ID: id, Title: "Edit conflict: " + s.titleOr(id), Mode: "edit", Exists: true,
-			Content: s.ui_("edit.html", map[string]any{
-				"ID": id, "URL": wiki.PageURL(id), "Text": text, "Base": conflict.Current, "Exists": true,
-				"Summary": summary, "Conflict": string(theirs), "IsData": isData(id),
-			})})
-		return
-	}
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	if isData(id) {
-		http.Redirect(w, r, "/_/history/"+id, http.StatusSeeOther)
-		return
-	}
-	s.store.UpdateIndex(id, s.user(r), time.Now())
-	http.Redirect(w, r, wiki.PageURL(id), http.StatusSeeOther)
-}
-
-// fileOf maps an id to its repo file: data files keep their .json
-// extension, pages get .md.
-func fileOf(id string) string {
-	if isData(id) {
-		return id
-	}
-	return id + ".md"
-}
-
-func isData(id string) bool { return strings.HasSuffix(id, ".json") }
-
 func (s *Server) preview(w http.ResponseWriter, r *http.Request) {
 	id := idFrom(r, "/_/preview/")
 	body, _ := io.ReadAll(io.LimitReader(r.Body, 4<<20))
@@ -141,8 +53,8 @@ func (s *Server) revision(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-	if isData(id) {
-		raw = []byte("# " + id + "\n\n```json\n" + string(raw) + "```\n")
+	if isFile(id) {
+		raw = []byte("# " + id + "\n\n```" + textExts[strings.ToLower(path.Ext(id))] + "\n" + string(raw) + "```\n")
 	}
 	pg := wiki.ParsePage(id, raw)
 	res := s.render.Render(pg)
@@ -202,6 +114,9 @@ func (s *Server) diff(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) revert(w http.ResponseWriter, r *http.Request) {
 	id := idFrom(r, "/_/revert/")
+	if !s.checkEditable(w, r, id) {
+		return
+	}
 	rev := r.FormValue("rev")
 	raw, err := s.store.Git.Show(rev, fileOf(id))
 	if err != nil {
@@ -214,6 +129,10 @@ func (s *Server) revert(w http.ResponseWriter, r *http.Request) {
 	}
 	if _, err := s.store.Git.Write(fileOf(id), raw, "-", s.user(r), "revert "+id+" to "+short); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if isFile(id) {
+		http.Redirect(w, r, "/_/history/"+id, http.StatusSeeOther)
 		return
 	}
 	s.store.UpdateIndex(id, s.user(r), time.Now())

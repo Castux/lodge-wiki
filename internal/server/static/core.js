@@ -8,6 +8,8 @@
     const text = form.querySelector(".lw-text");
     const out = form.querySelector(".lw-preview .page");
     let dirty = false, timer = null, mode = localStorage.getItem("lw-editor-mode") || "write";
+    // Non-page files (JSON, CSS, JS...) have no preview: always the text.
+    if (form.classList.contains("lw-file")) mode = "write";
 
     async function preview() {
       const res = await fetch(form.dataset.preview, { method: "POST", body: text.value, credentials: "same-origin" });
@@ -15,7 +17,7 @@
     }
     function setMode(m) {
       mode = m;
-      localStorage.setItem("lw-editor-mode", m);
+      if (!form.classList.contains("lw-file")) localStorage.setItem("lw-editor-mode", m);
       panes.className = "lw-editor-panes lw-mode-" + m;
       form.querySelectorAll(".lw-tab").forEach(b => b.classList.toggle("lw-active", b.dataset.tab === m));
       if (m !== "write") preview();

@@ -1,0 +1,36 @@
+<h1>Files</h1>
+<div class="level1">
+<p class="lw-files-path"><a href="/_/files">content</a>{{range .Crumbs}} / <a href="{{.URL}}">{{.Title}}</a>{{end}}</p>
+{{if .Saved}}<p class="lw-note">Saved {{.Saved}}.</p>{{end}}
+
+<table class="lw-history lw-files">
+  <thead><tr><th>Name</th><th>Size</th><th>Changed</th><th></th></tr></thead>
+  <tbody>
+  {{if .Dir}}<tr><td colspan="4"><a href="/_/files?dir={{.Dir}}/..">⬑ up</a></td></tr>{{end}}
+  {{range .Rows}}
+  <tr>
+    {{if .Dir}}
+    <td><a href="/_/files?dir={{.Path}}">📁 {{.Name}}</a>{{if .Admin}} <span class="lw-quiet">(admins)</span>{{end}}</td><td></td><td></td><td></td>
+    {{else}}
+    <td>{{if .Page}}<a href="{{pageurl .Page}}">{{.Name}}</a>{{if .Title}} <span class="lw-quiet">{{.Title}}</span>{{end}}{{else}}{{.Name}}{{end}}</td>
+    <td class="lw-quiet">{{size .Size}}</td>
+    <td class="lw-quiet" title="{{date .Modified}}">{{ago .Modified}}</td>
+    <td class="lw-actions">
+      {{if .Editable}}<a href="/_/edit/{{if .Page}}{{.Page}}{{else}}{{.Path}}{{end}}">edit</a> · {{end}}<a href="/_/history/{{if .Page}}{{.Page}}{{else}}{{.Path}}{{end}}">history</a>{{if not .Page}} · <a href="/{{.Path}}" target="_blank">open</a>{{end}}
+    </td>
+    {{end}}
+  </tr>
+  {{end}}
+  </tbody>
+</table>
+
+{{if .CanCreate}}
+<form action="/_/new" class="lw-form lw-newfile">
+  <input type="hidden" name="dir" value="{{.Dir}}">
+  <label>New file in this folder <input name="name" placeholder="my-page, data.json, widget.js, style.css…" required></label>
+  <button class="lw-button">Create</button>
+</form>
+<p class="lw-quiet">A name without extension creates a page. For a new widget, create <code>widget.js</code> (and optionally <code>widget.css</code>) in a new folder under <code>_widgets/</code>, e.g. <code>_widgets/dice/widget.js</code>, then use it in a page with a <code>```widget dice</code> block. Images and other media are uploaded from the page editor.</p>
+{{end}}
+{{if not .IsAdmin}}<p class="lw-quiet">Layouts and widgets (folders starting with <code>_</code>) can only be changed by admins.</p>{{end}}
+</div>

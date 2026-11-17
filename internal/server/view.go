@@ -67,6 +67,15 @@ var funcs = template.FuncMap{
 	},
 	"ago":     ago,
 	"pageurl": wiki.PageURL,
+	"size": func(n int64) string {
+		switch {
+		case n >= 1<<20:
+			return fmt.Sprintf("%.1f MB", float64(n)/(1<<20))
+		case n >= 1<<10:
+			return fmt.Sprintf("%d KB", n>>10)
+		}
+		return fmt.Sprintf("%d B", n)
+	},
 }
 
 func ago(t time.Time) string {
@@ -244,6 +253,9 @@ func (s *Server) tools(v *View) []Tool {
 		Tool{Name: "recent", Label: "Recent changes", URL: "/_/recent", Active: v.Mode == "recent"},
 		Tool{Name: "index", Label: "Index", URL: "/_/index", Active: v.Mode == "index"},
 	)
+	if v.CanEdit {
+		t = append(t, Tool{Name: "files", Label: "Files", URL: "/_/files", Active: v.Mode == "files"})
+	}
 	if v.User != "" {
 		t = append(t, Tool{Name: "logout", Label: "Log out (" + v.User + ")", URL: "/_/logout", Post: true})
 	} else {

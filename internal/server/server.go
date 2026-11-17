@@ -80,6 +80,8 @@ func (s *Server) routes() {
 	m.Handle("GET /_/move/", s.need(RoleEditor, s.moveForm))
 	m.Handle("POST /_/move/", s.need(RoleEditor, s.move))
 	m.Handle("GET /_/backlinks/", s.need(RoleReader, s.backlinks))
+	m.Handle("GET /_/files", s.need(RoleEditor, s.files))
+	m.Handle("GET /_/new", s.need(RoleEditor, s.newFile))
 	m.Handle("GET /_/recent", s.need(RoleReader, s.recent))
 	m.Handle("GET /_/search", s.need(RoleReader, s.search))
 	m.Handle("GET /_/index", s.need(RoleReader, s.index))
