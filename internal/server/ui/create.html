@@ -1,0 +1,10 @@
+<h1>New page</h1>
+<div class="level1">
+<form action="/_/create" class="lw-form lw-create">
+  <label>Title <input name="title" required autofocus placeholder="The Siege of Kobold Mound"></label>
+  <label>Folder <input name="ns" value="{{.NS}}" list="lw-folders" placeholder="foolslanding/story" style="max-width:30em"></label>
+  <datalist id="lw-folders">{{range .Folders}}<option value="{{.}}">{{end}}</datalist>
+  <p class="lw-quiet">The page's address is made from the folder and the title, e.g. <code>/foolslanding/story/the-siege-of-kobold-mound</code>. Leave the folder empty to create it at the top level. If a page with that address already exists, you are taken to it.</p>
+  <button class="lw-button lw-primary">Create and edit</button>
+</form>
+</div>

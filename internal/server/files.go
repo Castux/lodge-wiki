@@ -103,7 +103,11 @@ func (s *Server) editForm(w http.ResponseWriter, r *http.Request) {
 	case !exists && isFile(id):
 		raw = nil
 	case !exists:
-		raw = []byte("# " + strings.ReplaceAll(wiki.Name(id), "-", " ") + "\n\n")
+		title := strings.TrimSpace(r.URL.Query().Get("title"))
+		if title == "" {
+			title = strings.ReplaceAll(wiki.Name(id), "-", " ")
+		}
+		raw = []byte("# " + title + "\n\n")
 	case path.Ext(file) == ".json" && bytes.Count(bytes.TrimSpace(raw), []byte("\n")) == 0 && len(raw) > 200:
 		// One long line: show it indented so it can be edited by hand.
 		var buf bytes.Buffer
@@ -343,4 +347,42 @@ func (s *Server) titleOr(id string) string {
 		return t
 	}
 	return wiki.Name(id)
+}
+
+// createForm asks for a new page's title and folder. With a title it
+// goes straight to the editor (or to the page, if it already exists).
+func (s *Server) createForm(w http.ResponseWriter, r *http.Request) {
+	ns := strings.Trim(r.URL.Query().Get("ns"), "/")
+	title := strings.TrimSpace(r.URL.Query().Get("title"))
+	if title != "" {
+		var segs []string
+		for _, seg := range strings.Split(ns, "/") {
+			if c := wiki.CleanID(seg); c != "" {
+				segs = append(segs, c)
+			}
+		}
+		name := wiki.CleanID(strings.ReplaceAll(title, "/", "-"))
+		if name == "" {
+			name = "new-page"
+		}
+		id := path.Join(append(segs, name)...)
+		if s.store.Exists(id) {
+			http.Redirect(w, r, wiki.PageURL(id)+"?exists=1", http.StatusSeeOther)
+			return
+		}
+		http.Redirect(w, r, "/_/edit/"+id+"?title="+url.QueryEscape(title), http.StatusSeeOther)
+		return
+	}
+	// Offer the existing folders for autocompletion.
+	seen := map[string]bool{}
+	var folders []string
+	for id := range s.store.Index().Pages {
+		for ns := wiki.Namespace(id); ns != "" && !seen[ns]; ns = wiki.Namespace(ns) {
+			seen[ns] = true
+			folders = append(folders, ns)
+		}
+	}
+	sort.Strings(folders)
+	s.show(w, r, &View{ID: "_create", Title: "New page", Mode: "create",
+		Content: s.ui_("create.html", map[string]any{"NS": ns, "Folders": folders})})
 }

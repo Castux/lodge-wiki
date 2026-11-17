@@ -255,10 +255,16 @@ func (s *Server) tools(v *View) []Tool {
 	}
 	t = append(t,
 		Tool{Name: "recent", Label: "Recent changes", URL: "/_/recent", Active: v.Mode == "recent"},
-		Tool{Name: "index", Label: "Index", URL: "/_/index", Active: v.Mode == "index"},
 	)
 	if v.CanEdit {
-		t = append(t, Tool{Name: "files", Label: "Files", URL: "/_/files", Active: v.Mode == "files"})
+		ns := wiki.Namespace(v.ID)
+		if strings.HasPrefix(v.ID, "_") || isFile(v.ID) {
+			ns = ""
+		}
+		t = append(t,
+			Tool{Name: "create", Label: "New page", URL: "/_/create?ns=" + ns, Active: v.Mode == "create"},
+			Tool{Name: "files", Label: "Files", URL: "/_/files", Active: v.Mode == "files"},
+		)
 	}
 	if v.User != "" {
 		t = append(t, Tool{Name: "logout", Label: "Log out (" + v.User + ")", URL: "/_/logout", Post: true})
