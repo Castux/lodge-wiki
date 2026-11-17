@@ -77,6 +77,9 @@ recursive: true           # include pages in sub-namespaces
 namespaces: true          # also list sub-namespaces
 tree: true                # nested tree of sub-namespaces and pages
 heading: Pages            # heading shown above the list (default: none)
+natural: true             # sort numbers by value ("part 2" before "part 10")
+label: "{title} ({user})" # what each entry shows: {title}, {id}, {name}, {user} (creator), {editor} (last author), {date}
+dates: true               # show the last modification date after each entry
 ```
 ````
 
