@@ -164,7 +164,8 @@ func (c *conv) inline(s string, inTable bool) string {
 				i += j + 7
 				continue
 			}
-		case strings.HasPrefix(rest, `\\`) && (i+2 >= len(s) || s[i+2] == ' ' || s[i+2] == '\n' || s[i+2] == '\t'):
+		case strings.HasPrefix(rest, `\\`) && (i+2 >= len(s) || s[i+2] == ' ' || s[i+2] == '\n' || s[i+2] == '\t' ||
+			(c.looseBreaks && s[i+2] != '\\')):
 			flush()
 			out.WriteString("<br>")
 			i += 2
@@ -189,7 +190,9 @@ func (c *conv) inline(s string, inTable bool) string {
 			if m := reURL.FindString(rest); m != "" {
 				m = strings.TrimRight(m, ".,;:!?)'")
 				flush()
-				if strings.HasPrefix(m, "www.") {
+				if id, anchor, ok := c.oldSiteID(m); ok {
+					out.WriteString(c.link(id + anchor))
+				} else if strings.HasPrefix(m, "www.") {
 					out.WriteString(m)
 				} else {
 					out.WriteString("<" + m + ">")
@@ -286,7 +289,9 @@ func findClose(s, marker string) int {
 			return -1
 		}
 		if strings.HasPrefix(s[i:], marker) {
-			if marker == "//" && s[i-1] == ':' {
+			// "://" is a URL scheme only when a non-space follows
+			// ("http://x"); "Others://" closes the italics, as in DokuWiki.
+			if marker == "//" && s[i-1] == ':' && i+2 < len(s) && s[i+2] != ' ' && s[i+2] != '\n' && s[i+2] != '\\' {
 				continue
 			}
 			return i
@@ -461,6 +466,10 @@ func (c *conv) link(inner string) string {
 		labelMD = c.inline(label, false)
 	}
 
+	if id, anchor, ok := c.oldSiteID(target); ok {
+		target = id + anchor
+	}
+
 	var url string
 	switch {
 	case reScheme.MatchString(target) || strings.HasPrefix(target, "www."):
@@ -489,6 +498,7 @@ func (c *conv) link(inner string) string {
 		}
 	default:
 		page, anchor, _ := strings.Cut(target, "#")
+		page, _, _ = strings.Cut(page, "?") // e.g. ?s[]=word search highlighting
 		slug := ""
 		if anchor != "" {
 			slug = sectionSlug(anchor)
@@ -647,3 +657,47 @@ func (c *conv) media(inner string) string {
 }
 
 var _ = strconv.Itoa
+
+var reOldSite = regexp.MustCompile(`^(?:https?://)?(?:www\.)?the-chasers-lodge\.net/(.*)$`)
+
+// oldSiteID turns an absolute link to a page of the old DokuWiki site
+// (https://the-chasers-lodge.net/ns:page or /doku.php?id=ns:page) into
+// an absolute DokuWiki id (leading ':') and anchor.
+func (c *conv) oldSiteID(u string) (string, string, bool) {
+	m := reOldSite.FindStringSubmatch(u)
+	if m == nil {
+		return "", "", false
+	}
+	p := m[1]
+	anchor := ""
+	if k := strings.IndexByte(p, '#'); k >= 0 {
+		p, anchor = p[:k], p[k:]
+	}
+	explicit := false
+	switch {
+	case strings.HasPrefix(p, "doku.php?"):
+		q := p[len("doku.php?"):]
+		p = ""
+		for _, kv := range strings.Split(q, "&") {
+			if v, ok := strings.CutPrefix(kv, "id="); ok {
+				p = v
+			}
+		}
+		explicit = true
+	case strings.HasPrefix(p, "doku.php/"):
+		p = p[len("doku.php/"):]
+		explicit = true
+	default:
+		if k := strings.IndexByte(p, '?'); k >= 0 {
+			p = p[:k]
+		}
+	}
+	p = strings.TrimSuffix(p, "/")
+	if p == "" {
+		return ":start", anchor, explicit || m[1] == ""
+	}
+	if !explicit && !strings.Contains(p, ":") && !c.site.exists(wiki.CleanID(p)) {
+		return "", "", false
+	}
+	return ":" + strings.ReplaceAll(p, "/", ":"), anchor, true
+}

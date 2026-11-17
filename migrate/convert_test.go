@@ -76,3 +76,19 @@ func TestIssues(t *testing.T) {
 		t.Errorf("issues = %v", r.Issues)
 	}
 }
+
+func TestSplitCrossItalics(t *testing.T) {
+	cases := map[string]string{
+		"//one\n\ntwo// three":          "//one//\n\n//two// three",
+		"//a\\\\\n\n  * item\n\nb//":    "//a//\\\\\n\n  * //item//\n\n//b//",
+		"x //open\n\nrest":              "x //open//\n\n//rest//",
+		"//t//\n\n==== H ====\n\n//u//": "//t//\n\n==== H ====\n\n//u//",
+		"//a\n\n==== H ====\n\nb//":     "//a//\n\n==== H ====\n\n//b//",
+		"see http://x.org/a and //b//":  "see http://x.org/a and //b//",
+	}
+	for in, want := range cases {
+		if got := splitCrossItalics(in); got != want {
+			t.Errorf("splitCrossItalics(%q) = %q, want %q", in, got, want)
+		}
+	}
+}

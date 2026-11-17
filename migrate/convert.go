@@ -29,11 +29,12 @@ type Result struct {
 }
 
 type conv struct {
-	id, ns    string
-	site      *Site
-	footnotes []string
-	issues    map[string]bool
-	noTOC     bool
+	id, ns      string
+	site        *Site
+	footnotes   []string
+	issues      map[string]bool
+	noTOC       bool
+	looseBreaks bool // treat a double backslash followed by any character as a line break
 }
 
 func (c *conv) issue(format string, args ...any) {
@@ -58,11 +59,17 @@ var (
 // Convert turns DokuWiki text of page id into markdown.
 func Convert(id, text string, site *Site) Result {
 	text = strings.ReplaceAll(text, "\r\n", "\n")
+	if DedentPages[id] {
+		text = dedentLines(text)
+	}
+	if CrossItalicPages[id] {
+		text = splitCrossItalics(text)
+	}
 	if t := strings.TrimSpace(text); (strings.HasPrefix(t, "{") || strings.HasPrefix(t, "[")) && json.Valid([]byte(t)) {
 		return Result{Text: t + "\n", JSON: true}
 	}
 
-	c := &conv{id: id, ns: wiki.Namespace(id), site: site, issues: map[string]bool{}}
+	c := &conv{id: id, ns: wiki.Namespace(id), site: site, issues: map[string]bool{}, looseBreaks: LooseBreakPages[id]}
 
 	text = reMacro.ReplaceAllStringFunc(text, func(m string) string {
 		switch m {
@@ -569,4 +576,14 @@ func (c *conv) nspages(args string) []string {
 func yamlString(s string) string {
 	b, _ := json.Marshal(s)
 	return string(b)
+}
+
+// LooseBreakPages are pages whose authors wrote "\\" directly before the
+// next word (usually a curly quote) and clearly meant a line break.
+// DokuWiki only breaks when whitespace follows.
+var LooseBreakPages = map[string]bool{
+	"skarnholm/log/into-the-deep":                        true,
+	"skarnholm/log/2026-06-24-the-dance":                 true,
+	"skarnholm/log/2025-08-08-hrafnkefli-rift":           true,
+	"skarnholm/log/making-money-off-some-fishy-business": true,
 }

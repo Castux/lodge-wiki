@@ -42,6 +42,8 @@ func main() {
 	out := flag.String("out", "../lodge-data", "output repository")
 	report := flag.String("report", "migrate/REPORT.md", "report file")
 	noHistory := flag.Bool("no-history", false, "skip history replay")
+	pages := flag.String("pages", "", "comma-separated page ids: only re-convert these into --out")
+	force := flag.Bool("force", false, "recreate --out even if it has commits after the migration")
 	flag.Parse()
 	start := time.Now()
 
@@ -73,6 +75,32 @@ func main() {
 		site.Titles[id] = t
 	}
 	log.Printf("%d current pages", len(current))
+
+	// --pages: re-convert only these pages into --out, touching nothing
+	// else (used for ad hoc fixes after lodge-data became the source).
+	if *pages != "" {
+		for _, id := range strings.Split(*pages, ",") {
+			id = strings.TrimSpace(id)
+			text, ok := current[id]
+			if !ok {
+				log.Fatalf("no DokuWiki page %s", id)
+			}
+			res := Convert(id, text, site)
+			ext := ".md"
+			if res.JSON {
+				ext = ".json"
+			}
+			check(os.WriteFile(filepath.Join(*out, filepath.FromSlash(id)+ext), []byte(res.Text), 0o644))
+		}
+		return
+	}
+
+	// Refuse to wipe a repository that has commits made after the
+	// migration: it is the source of truth from then on.
+	if last, err := exec.Command("git", "-C", *out, "log", "-1", "--format=%an").Output(); err == nil &&
+		strings.TrimSpace(string(last)) != "" && strings.TrimSpace(string(last)) != "migration" && !*force {
+		log.Fatalf("%s has commits after the migration (last by %s); refusing to recreate it (use --force)", *out, strings.TrimSpace(string(last)))
+	}
 
 	// Keep README/.gitignore and the remote, then reset the repo.
 	readme, _ := os.ReadFile(filepath.Join(*out, "README.md"))
