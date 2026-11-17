@@ -71,6 +71,10 @@ func Convert(id, text string, site *Site) Result {
 
 	c := &conv{id: id, ns: wiki.Namespace(id), site: site, issues: map[string]bool{}, looseBreaks: LooseBreakPages[id]}
 
+	if md, ok := strings.CutPrefix(strings.TrimLeft(text, " \t\n"), "<!DOCTYPE markdown>"); ok {
+		return Result{Text: normalizeBlank(c.markdownTargets(md))}
+	}
+
 	text = reMacro.ReplaceAllStringFunc(text, func(m string) string {
 		switch m {
 		case "~~NOTOC~~":

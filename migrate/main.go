@@ -28,6 +28,9 @@ import (
 
 var reTitle = regexp.MustCompile(`(?m)^\s*={2,}\s*(.*?)\s*={2,}\s*$`)
 
+// First markdown heading: ATX ("# Title") or setext ("Title" over "===").
+var reMDTitle = regexp.MustCompile(`(?m)^#{1,6}[ \t]+(.+?)[ \t#]*$|^([^\n]+)\n=+[ \t]*$`)
+
 type change struct {
 	ts      int64
 	typ     string
@@ -69,7 +72,11 @@ func main() {
 	site := &Site{Titles: map[string]string{}}
 	for id, text := range current {
 		t := ""
-		if m := reTitle.FindStringSubmatch(text); m != nil {
+		if strings.HasPrefix(strings.TrimSpace(text), "<!DOCTYPE markdown>") {
+			if m := reMDTitle.FindStringSubmatch(text); m != nil {
+				t = strings.TrimSpace(m[1] + m[2])
+			}
+		} else if m := reTitle.FindStringSubmatch(text); m != nil {
 			t = strings.TrimSpace(m[1])
 		}
 		site.Titles[id] = t

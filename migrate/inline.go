@@ -499,6 +499,7 @@ func (c *conv) link(inner string) string {
 	default:
 		page, anchor, _ := strings.Cut(target, "#")
 		page, _, _ = strings.Cut(page, "?") // e.g. ?s[]=word search highlighting
+		page = dwSlash(page)
 		slug := ""
 		if anchor != "" {
 			slug = sectionSlug(anchor)
@@ -614,7 +615,7 @@ func (c *conv) media(inner string) string {
 	if reScheme.MatchString(src) {
 		url = src
 	} else {
-		url = "/_media/" + wiki.Resolve(c.ns, src)
+		url = "/_media/" + wiki.Resolve(c.ns, dwSlash(src))
 	}
 	ext := strings.ToLower(path.Ext(src))
 	name := path.Base(src)
@@ -700,4 +701,10 @@ func (c *conv) oldSiteID(u string) (string, string, bool) {
 		return "", "", false
 	}
 	return ":" + strings.ReplaceAll(p, "/", ":"), anchor, true
+}
+
+// dwSlash applies DokuWiki's useslash=0: a '/' in a page or media id is
+// not a namespace separator but an ordinary character, cleaned to '-'.
+func dwSlash(id string) string {
+	return strings.ReplaceAll(id, "/", "-")
 }

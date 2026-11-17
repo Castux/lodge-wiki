@@ -92,3 +92,11 @@ func TestSplitCrossItalics(t *testing.T) {
 		}
 	}
 }
+
+func TestMarkdownPassthrough(t *testing.T) {
+	in := "<!DOCTYPE markdown>\n\nTitle\n=====\n\n![War](foolslanding:story:war.jpg) [pet](foolslanding:notice:missingpet#Day_one) [x](https://e.org) [y](/a/b)\n\n```\n[k](a:b)\n```\n"
+	want := "Title\n=====\n\n![War](/_media/foolslanding/story/war.jpg) [pet](/foolslanding/notice/missingpet#day-one) [x](https://e.org) [y](/a/b)\n\n```\n[k](a:b)\n```\n"
+	if got := conv1(t, "foolslanding/story/x", in); got != want {
+		t.Errorf("got %q\nwant %q", got, want)
+	}
+}
