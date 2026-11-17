@@ -101,16 +101,28 @@ func findFrontmatterEnd(b []byte) int {
 	return -1
 }
 
-// FirstHeading returns the plain text of the first ATX heading, if any.
+// FirstHeading returns the plain text of the first heading, if any: an
+// ATX heading ("# Title") or a setext one ("Title" over "====" or "----").
 func FirstHeading(body []byte) string {
 	inFence := false
-	for _, line := range strings.Split(string(body), "\n") {
+	lines := strings.Split(string(body), "\n")
+	prev := ""
+	for _, line := range lines {
 		t := strings.TrimSpace(line)
 		if strings.HasPrefix(t, "```") || strings.HasPrefix(t, "~~~") {
 			inFence = !inFence
+			prev = ""
 			continue
 		}
-		if inFence || !strings.HasPrefix(t, "#") {
+		if inFence {
+			continue
+		}
+		if prev != "" && len(t) >= 2 && (strings.Trim(t, "=") == "" || strings.Trim(t, "-") == "") &&
+			!strings.HasPrefix(prev, "#") && !strings.HasPrefix(prev, "<") && !strings.HasPrefix(prev, "-") && !strings.HasPrefix(prev, "!") {
+			return StripInline(prev)
+		}
+		prev = t
+		if !strings.HasPrefix(t, "#") {
 			continue
 		}
 		h := strings.TrimLeft(t, "#")

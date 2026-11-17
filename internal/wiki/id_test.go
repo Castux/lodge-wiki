@@ -36,3 +36,18 @@ func TestResolve(t *testing.T) {
 		}
 	}
 }
+
+func TestFirstHeading(t *testing.T) {
+	cases := map[string]string{
+		"# Title\n\ntext": "Title",
+		"intro\n\nA Witch's Council\n=====\n\n## Later": "A Witch's Council",
+		"Sub title\n---------\n":                        "Sub title",
+		"Para\n\n---\n\n# Real":                         "Real",
+		"```\n# not\n```\n## Yes":                       "Yes",
+	}
+	for in, want := range cases {
+		if got := FirstHeading([]byte(in)); got != want {
+			t.Errorf("FirstHeading(%q) = %q, want %q", in, got, want)
+		}
+	}
+}
