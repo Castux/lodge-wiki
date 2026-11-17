@@ -1,8 +1,37 @@
 <h1>Files</h1>
 <div class="level1">
 <p class="lw-files-path"><a href="/_/files">content</a>{{range .Crumbs}} / <a href="{{.URL}}">{{.Title}}</a>{{end}}</p>
-{{if .Saved}}<p class="lw-note">Saved {{.Saved}}.</p>{{end}}
+{{if .Saved}}<p class="lw-note">{{if .InMedia}}{{.Saved}}.{{else}}Saved {{.Saved}}.{{end}}</p>{{end}}
 
+{{if .InMedia}}
+<form method="post" action="/_/media" enctype="multipart/form-data" class="lw-form lw-upload">
+  <input type="hidden" name="ns" value="{{.MediaNS}}">
+  <input type="hidden" name="back" value="/_/files?dir={{.Dir}}">
+  <label class="lw-inline-label">Upload to this folder <input type="file" name="file" required></label>
+  <button class="lw-button">Upload</button>
+  <span class="lw-quiet">Media files are not versioned. Deleting one moves it to the server's bin, and only files no page uses can be deleted.</span>
+</form>
+{{if .Dir}}{{if ne .Dir "_media"}}<p><a href="/_/files?dir={{.Dir}}/..">⬑ up</a></p>{{end}}{{end}}
+<div class="lw-mediagrid">
+{{range .Rows}}
+  <div class="lw-mediacell{{if .Dir}} lw-folder{{end}}">
+    {{if .Dir}}<a href="/_/files?dir={{.Path}}" class="lw-thumb lw-thumb-folder">📁</a>
+    {{else if .Image}}<a href="/{{.Path}}" target="_blank" class="lw-thumb"><img src="/{{.Path}}?w=150" loading="lazy" alt=""></a>
+    {{else}}<a href="/{{.Path}}" target="_blank" class="lw-thumb lw-thumb-folder">📄</a>{{end}}
+    <div class="lw-mediainfo">
+      <span class="lw-medianame" title="{{.Name}}">{{.Name}}</span>
+      <span class="lw-quiet">{{if not .Dir}}{{size .Size}} · {{end}}{{if .Uses}}<a href="/_/used?path={{.Path}}">used by {{.Uses}}</a>{{else}}unused{{end}}</span>
+      <span class="lw-mediaactions">
+        {{if not .Dir}}<button type="button" class="lw-link lw-copy" data-copy="/{{.Path}}">copy address</button> · {{end}}<a href="/_/mv?path={{.Path}}">move</a>
+        {{if not .Uses}} · <form method="post" action="/_/rm" class="lw-inline" onsubmit="return confirm('Move {{.Name}} to the bin?')"><input type="hidden" name="path" value="{{.Path}}"><button class="lw-link">delete</button></form>{{end}}
+      </span>
+    </div>
+  </div>
+{{else}}<p class="lw-quiet">This folder is empty.</p>
+{{end}}
+</div>
+
+{{else}}
 <table class="lw-history lw-files">
   <thead><tr><th>Name</th><th>Size</th><th>Changed</th><th></th></tr></thead>
   <tbody>
@@ -10,13 +39,14 @@
   {{range .Rows}}
   <tr>
     {{if .Dir}}
-    <td><a href="/_/files?dir={{.Path}}">📁 {{.Name}}</a>{{if .Admin}} <span class="lw-quiet">(admins)</span>{{end}}</td><td></td><td></td><td></td>
+    <td><a href="/_/files?dir={{.Path}}">📁 {{.Name}}</a>{{if .Admin}} <span class="lw-quiet">(admins)</span>{{end}}{{if .Media}} <span class="lw-quiet">images and other media</span>{{end}}</td><td></td><td></td>
+    <td class="lw-actions">{{if .Movable}}<a href="/_/mv?path={{.Path}}">move</a>{{end}}</td>
     {{else}}
     <td>{{if .Page}}<a href="{{pageurl .Page}}">{{.Name}}</a>{{if .Title}} <span class="lw-quiet">{{.Title}}</span>{{end}}{{else}}{{.Name}}{{end}}</td>
     <td class="lw-quiet">{{size .Size}}</td>
     <td class="lw-quiet" title="{{date .Modified}}">{{ago .Modified}}</td>
     <td class="lw-actions">
-      {{if .Editable}}<a href="/_/edit/{{if .Page}}{{.Page}}{{else}}{{.Path}}{{end}}">edit</a> · {{end}}<a href="/_/history/{{if .Page}}{{.Page}}{{else}}{{.Path}}{{end}}">history</a>{{if not .Page}} · <a href="/{{.Path}}" target="_blank">open</a>{{end}}
+      {{if .Editable}}<a href="/_/edit/{{if .Page}}{{.Page}}{{else}}{{.Path}}{{end}}">edit</a> · {{end}}<a href="/_/history/{{if .Page}}{{.Page}}{{else}}{{.Path}}{{end}}">history</a>{{if .Movable}} · <a href="/_/mv?path={{.Path}}">move</a>{{end}}{{if not .Page}} · <a href="/{{.Path}}" target="_blank">open</a>{{end}}
     </td>
     {{end}}
   </tr>
@@ -30,7 +60,8 @@
   <label>New file in this folder <input name="name" placeholder="my-page, data.json, widget.js, style.css…" required></label>
   <button class="lw-button">Create</button>
 </form>
-<p class="lw-quiet">A name without extension creates a page. For a new widget, create <code>widget.js</code> (and optionally <code>widget.css</code>) in a new folder under <code>_widgets/</code>, e.g. <code>_widgets/dice/widget.js</code>, then use it in a page with a <code>```widget dice</code> block. Images and other media are uploaded from the page editor.</p>
+<p class="lw-quiet">A name without extension creates a page. For a new widget, create <code>widget.js</code> (and optionally <code>widget.css</code>) in a new folder under <code>_widgets/</code>, e.g. <code>_widgets/dice/widget.js</code>, then use it in a page with a <code>```widget dice</code> block. Images and other media are in <a href="/_/files?dir=_media">_media</a>.</p>
 {{end}}
 {{if not .IsAdmin}}<p class="lw-quiet">Layouts and widgets (folders starting with <code>_</code>) can only be changed by admins.</p>{{end}}
+{{end}}
 </div>

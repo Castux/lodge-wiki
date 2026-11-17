@@ -152,7 +152,8 @@ type PageInfo struct {
 	Modified time.Time
 	Author   string // last author
 	Links    []string
-	Image    string // first image src, for picture listings
+	Image    string   // first image src, for picture listings
+	Media    []string // media files used, as paths under _media/
 	Size     int
 }
 
@@ -160,7 +161,8 @@ type PageInfo struct {
 type Index struct {
 	Pages     map[string]*PageInfo
 	Backlinks map[string][]string
-	Text      map[string]string // lowercased body, for search
+	MediaUse  map[string][]string // media path -> pages using it
+	Text      map[string]string   // lowercased body, for search
 }
 
 // Index returns the current index.
@@ -186,7 +188,7 @@ func (s *Store) Title(id string) string {
 
 // Reindex rebuilds the whole index from disk and git history.
 func (s *Store) Reindex() error {
-	idx := &Index{Pages: map[string]*PageInfo{}, Backlinks: map[string][]string{}, Text: map[string]string{}}
+	idx := &Index{Pages: map[string]*PageInfo{}, Backlinks: map[string][]string{}, MediaUse: map[string][]string{}, Text: map[string]string{}}
 	err := filepath.WalkDir(s.Root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -213,6 +215,7 @@ func (s *Store) Reindex() error {
 		p := ParsePage(id, raw)
 		info := &PageInfo{ID: id, Title: p.Title, Meta: p.Meta, Size: len(raw)}
 		info.Links, info.Image = scanLinks(id, p.Body)
+		info.Media = scanMedia(p.Body)
 		if st, err := d.Info(); err == nil {
 			info.Modified = st.ModTime()
 			info.Created = st.ModTime()
@@ -227,6 +230,9 @@ func (s *Store) Reindex() error {
 	for id, p := range idx.Pages {
 		for _, l := range p.Links {
 			idx.Backlinks[l] = append(idx.Backlinks[l], id)
+		}
+		for _, m := range p.Media {
+			idx.MediaUse[m] = append(idx.MediaUse[m], id)
 		}
 	}
 	for _, v := range idx.Backlinks {
@@ -250,7 +256,7 @@ func (s *Store) UpdateIndex(id, author string, when time.Time) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	old := s.index
-	idx := &Index{Pages: make(map[string]*PageInfo, len(old.Pages)), Backlinks: map[string][]string{}, Text: make(map[string]string, len(old.Text))}
+	idx := &Index{Pages: make(map[string]*PageInfo, len(old.Pages)), Backlinks: map[string][]string{}, MediaUse: map[string][]string{}, Text: make(map[string]string, len(old.Text))}
 	for k, v := range old.Pages {
 		idx.Pages[k] = v
 	}
@@ -268,12 +274,16 @@ func (s *Store) UpdateIndex(id, author string, when time.Time) {
 			info.Created = prev.Created
 		}
 		info.Links, info.Image = scanLinks(id, p.Body)
+		info.Media = scanMedia(p.Body)
 		idx.Pages[id] = info
 		idx.Text[id] = strings.ToLower(string(p.Body))
 	}
 	for pid, p := range idx.Pages {
 		for _, l := range p.Links {
 			idx.Backlinks[l] = append(idx.Backlinks[l], pid)
+		}
+		for _, m := range p.Media {
+			idx.MediaUse[m] = append(idx.MediaUse[m], pid)
 		}
 	}
 	for _, v := range idx.Backlinks {

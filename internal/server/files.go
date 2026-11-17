@@ -204,12 +204,22 @@ type FileEntry struct {
 	Editable bool
 	Admin    bool // only admins may edit
 	Title    string
+	Movable  bool
+	Media    bool // a file or folder under _media
+	Image    bool // an image, shown as a thumbnail
+	Uses     int  // pages using this media file or folder
 }
 
 // files is a browser for the whole content repo (except media).
 func (s *Server) files(w http.ResponseWriter, r *http.Request) {
 	dir := strings.Trim(path.Clean("/"+r.URL.Query().Get("dir")), "/")
-	if dir != "" {
+	inMedia := dir == "_media" || strings.HasPrefix(dir, "_media/")
+	if inMedia && dir != "_media" {
+		if ok, _ := fileAccess(strings.TrimPrefix(dir, "_media/")); !ok {
+			http.Error(w, "bad folder", http.StatusBadRequest)
+			return
+		}
+	} else if dir != "" && !inMedia {
 		if ok, _ := fileAccess(dir); !ok {
 			http.Error(w, "bad folder", http.StatusBadRequest)
 			return
@@ -221,14 +231,39 @@ func (s *Server) files(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	isAdmin := s.can(r, RoleAdmin)
+	idx := s.store.Index()
 	var rows []FileEntry
 	for _, e := range entries {
 		rel := path.Join(dir, e.Name())
+		if inMedia {
+			if strings.HasPrefix(e.Name(), ".") || strings.HasSuffix(e.Name(), ".upload") {
+				continue
+			}
+			m := strings.TrimPrefix(rel, "_media/")
+			fe := FileEntry{Name: e.Name(), Path: rel, Dir: e.IsDir(), Media: true, Movable: true}
+			if info, err := e.Info(); err == nil {
+				fe.Size, fe.Modified = info.Size(), info.ModTime()
+			}
+			ext := strings.ToLower(path.Ext(e.Name()))
+			fe.Image = !fe.Dir && (ext == ".jpg" || ext == ".jpeg" || ext == ".png" || ext == ".gif" || ext == ".webp" || ext == ".svg")
+			for k, us := range idx.MediaUse {
+				if k == m || (fe.Dir && strings.HasPrefix(k, m+"/")) {
+					fe.Uses += len(us)
+				}
+			}
+			rows = append(rows, fe)
+			continue
+		}
+		if dir == "" && e.Name() == "_media" {
+			rows = append(rows, FileEntry{Name: "_media", Path: "_media", Dir: true, Media: true})
+			continue
+		}
 		ok, admin := fileAccess(rel)
 		if !ok {
 			continue
 		}
 		fe := FileEntry{Name: e.Name(), Path: rel, Dir: e.IsDir(), Admin: admin}
+		fe.Movable = !admin && (fe.Dir || strings.HasSuffix(rel, ".md"))
 		if info, err := e.Info(); err == nil {
 			fe.Size, fe.Modified = info.Size(), info.ModTime()
 		}
@@ -262,7 +297,8 @@ func (s *Server) files(w http.ResponseWriter, r *http.Request) {
 	s.show(w, r, &View{ID: "_files", Title: "Files", Mode: "files",
 		Content: s.ui_("files.html", map[string]any{
 			"Dir": dir, "Crumbs": crumbs, "Rows": rows, "Saved": r.URL.Query().Get("saved"),
-			"CanCreate": !dirAdmin || isAdmin, "IsAdmin": isAdmin,
+			"CanCreate": (!dirAdmin || isAdmin) && !inMedia, "IsAdmin": isAdmin,
+			"InMedia": inMedia, "MediaNS": strings.TrimPrefix(strings.TrimPrefix(dir, "_media"), "/"),
 		})})
 }
 

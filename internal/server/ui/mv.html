@@ -1,0 +1,22 @@
+<h1>Move or rename <code>{{.Path}}</code></h1>
+<div class="level1">
+<form method="post" action="/_/mv" class="lw-form">
+  {{if .Error}}<p class="lw-error">{{.Error}}</p>{{end}}
+  <input type="hidden" name="path" value="{{.Path}}">
+  {{if eq .Kind "media"}}
+  <label>New location, inside <code>_media/</code> <input name="to" value="{{.To}}" size="60" style="max-width:40em" autofocus required></label>
+  <p class="lw-quiet">{{if .Uses}}{{.Uses}} page{{if ne .Uses 1}}s use{{else}} uses{{end}} it; their links will be updated in the same change.{{else}}No page uses it.{{end}}
+  Media files are not versioned, but every page change is.</p>
+  {{else if eq .Kind "folder"}}
+  <label>New folder path <input name="to" value="{{.To}}" size="60" style="max-width:40em" autofocus required></label>
+  <p class="lw-quiet">Moves the {{.Pages}} page{{if ne .Pages 1}}s{{end}} (and any other files) in this folder, keeping their history, and updates every link to them across the wiki.</p>
+  {{if .HasMedia}}<label class="lw-check"><input type="checkbox" name="media" value="1" checked> Also move the media folder <code>_media/{{.Path}}</code> and update image links</label>{{end}}
+  <p class="lw-quiet">Widgets that name a data file in this folder (e.g. <code>data: {{.Path}}/….json</code>) need that setting updated by hand.</p>
+  {{else}}
+  <label>New page path <input name="to" value="{{.To}}" size="60" style="max-width:40em" autofocus required></label>
+  <p class="lw-quiet">Use <code>/</code> to move it to another folder, e.g. <code>foolslanding/story/new-name</code>.
+  {{if .Uses}}Links in {{.Uses}} page{{if ne .Uses 1}}s{{end}} will be updated.{{end}} The page keeps its history.</p>
+  {{end}}
+  <button class="lw-button lw-primary">Move</button> <a href="{{.Back}}" class="lw-button">Cancel</a>
+</form>
+</div>

@@ -114,3 +114,24 @@ func scanLinks(id string, body []byte) (links []string, image string) {
 	}
 	return links, image
 }
+
+// mediaRefRe matches media references anywhere in a page, including
+// widget settings inside fenced blocks.
+var mediaRefRe = regexp.MustCompile(`/_media/([^\s"'()?#<>\]\[]+)`)
+
+// scanMedia lists the media files (paths under _media/) a page refers to.
+func scanMedia(body []byte) []string {
+	seen := map[string]bool{}
+	var out []string
+	for _, m := range mediaRefRe.FindAllSubmatch(body, -1) {
+		p, err := url.PathUnescape(string(m[1]))
+		if err != nil {
+			p = string(m[1])
+		}
+		if !seen[p] {
+			seen[p] = true
+			out = append(out, p)
+		}
+	}
+	return out
+}

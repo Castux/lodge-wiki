@@ -11,6 +11,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"path"
 	"path/filepath"
@@ -286,6 +287,10 @@ func (s *Server) mediaUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	log.Printf("upload %s by %s (%d bytes)", rel, s.user(r), hdr.Size)
+	if back := r.FormValue("back"); strings.HasPrefix(back, "/_/files") {
+		http.Redirect(w, r, back+"&saved="+url.QueryEscape(name+" uploaded"), http.StatusSeeOther)
+		return
+	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"url": "/" + rel, "name": name})
 }

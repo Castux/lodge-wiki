@@ -143,3 +143,17 @@
     load();
   });
 })();
+
+// "copy address" buttons (Files view, media).
+document.addEventListener("click", async ev => {
+  const b = ev.target.closest(".lw-copy");
+  if (!b) return;
+  try {
+    await navigator.clipboard.writeText(b.dataset.copy);
+    const old = b.textContent;
+    b.textContent = "copied!";
+    setTimeout(() => { b.textContent = old; }, 1200);
+  } catch (e) {
+    prompt("Copy this address:", b.dataset.copy);
+  }
+});
