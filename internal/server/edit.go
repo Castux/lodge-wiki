@@ -32,7 +32,7 @@ func (s *Server) editForm(w http.ResponseWriter, r *http.Request) {
 	}
 	s.show(w, r, &View{ID: id, Title: "Editing " + s.titleOr(id), Mode: "edit", Exists: exists,
 		Content: s.ui_("edit.html", map[string]any{
-			"ID": id, "URL": wiki.PageURL(id), "Text": string(raw), "Base": s.store.Git.Head(file), "Exists": exists,
+			"ID": id, "URL": wiki.PageURL(id), "Text": string(raw), "Base": s.store.Git.Head(file), "Exists": exists, "IsData": isData(id),
 		})})
 }
 
@@ -58,6 +58,15 @@ func (s *Server) save(w http.ResponseWriter, r *http.Request) {
 		}
 		content = []byte(text)
 	}
+	if isData(id) && content != nil && !json.Valid(content) {
+		w.WriteHeader(http.StatusBadRequest)
+		s.show(w, r, &View{ID: id, Title: "Editing " + id, Mode: "edit", Exists: true,
+			Content: s.ui_("edit.html", map[string]any{
+				"ID": id, "URL": wiki.PageURL(id), "Text": text, "Base": r.FormValue("base"), "Exists": true,
+				"Summary": summary, "IsData": true, "Error": "This is not valid JSON, so it was not saved. Check for missing commas or quotes.",
+			})})
+		return
+	}
 	msg := summary
 	if msg == "" {
 		if content == nil {
@@ -66,15 +75,15 @@ func (s *Server) save(w http.ResponseWriter, r *http.Request) {
 			msg = "edit " + id
 		}
 	}
-	_, err := s.store.Git.Write(id+".md", content, r.FormValue("base"), s.user(r), msg)
+	_, err := s.store.Git.Write(fileOf(id), content, r.FormValue("base"), s.user(r), msg)
 	var conflict *wiki.ErrConflict
 	if errors.As(err, &conflict) {
 		w.WriteHeader(http.StatusConflict)
-		theirs, _ := os.ReadFile(s.store.PageFile(id))
+		theirs, _ := os.ReadFile(s.store.File(fileOf(id)))
 		s.show(w, r, &View{ID: id, Title: "Edit conflict: " + s.titleOr(id), Mode: "edit", Exists: true,
 			Content: s.ui_("edit.html", map[string]any{
 				"ID": id, "URL": wiki.PageURL(id), "Text": text, "Base": conflict.Current, "Exists": true,
-				"Summary": summary, "Conflict": string(theirs),
+				"Summary": summary, "Conflict": string(theirs), "IsData": isData(id),
 			})})
 		return
 	}
@@ -82,9 +91,24 @@ func (s *Server) save(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	if isData(id) {
+		http.Redirect(w, r, "/_/history/"+id, http.StatusSeeOther)
+		return
+	}
 	s.store.UpdateIndex(id, s.user(r), time.Now())
 	http.Redirect(w, r, wiki.PageURL(id), http.StatusSeeOther)
 }
+
+// fileOf maps an id to its repo file: data files keep their .json
+// extension, pages get .md.
+func fileOf(id string) string {
+	if isData(id) {
+		return id
+	}
+	return id + ".md"
+}
+
+func isData(id string) bool { return strings.HasSuffix(id, ".json") }
 
 func (s *Server) preview(w http.ResponseWriter, r *http.Request) {
 	id := idFrom(r, "/_/preview/")
@@ -96,7 +120,7 @@ func (s *Server) preview(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) history(w http.ResponseWriter, r *http.Request) {
 	id := idFrom(r, "/_/history/")
-	revs, err := s.store.Git.Log(id+".md", 500)
+	revs, err := s.store.Git.Log(fileOf(id), 500)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -108,10 +132,13 @@ func (s *Server) history(w http.ResponseWriter, r *http.Request) {
 func (s *Server) revision(w http.ResponseWriter, r *http.Request) {
 	id := idFrom(r, "/_/rev/")
 	rev := r.URL.Query().Get("rev")
-	raw, err := s.store.Git.Show(rev, id+".md")
+	raw, err := s.store.Git.Show(rev, fileOf(id))
 	if err != nil {
 		http.NotFound(w, r)
 		return
+	}
+	if isData(id) {
+		raw = []byte("# " + id + "\n\n```json\n" + string(raw) + "```\n")
 	}
 	pg := wiki.ParsePage(id, raw)
 	res := s.render.Render(pg)
@@ -133,10 +160,10 @@ func (s *Server) diff(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "missing rev", http.StatusBadRequest)
 		return
 	}
-	out, err := s.store.Git.Diff(rev+"^", rev, id+".md")
+	out, err := s.store.Git.Diff(rev+"^", rev, fileOf(id))
 	if err != nil {
 		// first commit of the file: compare with nothing
-		out, err = s.store.Git.Diff("4b825dc642cb6eb9a060e54bf8d69288fbee4904", rev, id+".md")
+		out, err = s.store.Git.Diff("4b825dc642cb6eb9a060e54bf8d69288fbee4904", rev, fileOf(id))
 	}
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -158,7 +185,7 @@ func (s *Server) diff(w http.ResponseWriter, r *http.Request) {
 			lines = append(lines, DiffLine{"ctx", l[1:]})
 		}
 	}
-	revs, _ := s.store.Git.Log(id+".md", 0)
+	revs, _ := s.store.Git.Log(fileOf(id), 0)
 	var info wiki.Revision
 	for _, rv := range revs {
 		if strings.HasPrefix(rv.Hash, rev) {
@@ -172,7 +199,7 @@ func (s *Server) diff(w http.ResponseWriter, r *http.Request) {
 func (s *Server) revert(w http.ResponseWriter, r *http.Request) {
 	id := idFrom(r, "/_/revert/")
 	rev := r.FormValue("rev")
-	raw, err := s.store.Git.Show(rev, id+".md")
+	raw, err := s.store.Git.Show(rev, fileOf(id))
 	if err != nil {
 		http.Error(w, "revision not found", http.StatusNotFound)
 		return
@@ -181,7 +208,7 @@ func (s *Server) revert(w http.ResponseWriter, r *http.Request) {
 	if len(short) > 8 {
 		short = short[:8]
 	}
-	if _, err := s.store.Git.Write(id+".md", raw, "-", s.user(r), "revert "+id+" to "+short); err != nil {
+	if _, err := s.store.Git.Write(fileOf(id), raw, "-", s.user(r), "revert "+id+" to "+short); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -448,4 +475,25 @@ func (s *Server) listJSON(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(out)
+}
+
+// logJSON returns the commit history (all files) as JSON, for widgets
+// such as statistics. ?since=YYYY-MM-DD limits it.
+func (s *Server) logJSON(w http.ResponseWriter, r *http.Request) {
+	var since time.Time
+	if v := r.URL.Query().Get("since"); v != "" {
+		t, err := time.Parse("2006-01-02", v)
+		if err != nil {
+			http.Error(w, "since must be YYYY-MM-DD", http.StatusBadRequest)
+			return
+		}
+		since = t
+	}
+	commits, err := s.store.Git.LogAll(since)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(commits)
 }

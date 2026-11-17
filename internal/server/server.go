@@ -82,6 +82,7 @@ func (s *Server) routes() {
 	m.Handle("GET /_/raw/", s.need(RoleReader, s.rawGet))
 	m.Handle("PUT /_/raw/", s.need(RoleEditor, s.rawPut))
 	m.Handle("GET /_/list", s.need(RoleReader, s.listJSON))
+	m.Handle("GET /_/log", s.need(RoleReader, s.logJSON))
 	m.Handle("GET /", s.need(RoleReader, s.page))
 	s.mux = m
 }

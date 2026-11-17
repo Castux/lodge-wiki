@@ -222,3 +222,57 @@ func dirOf(p string) string {
 	}
 	return "."
 }
+
+// FileChange is one file touched by a commit.
+type FileChange struct {
+	Status string `json:"status"` // A added, M modified, D deleted, R renamed
+	Path   string `json:"path"`
+	From   string `json:"from,omitempty"` // for renames
+}
+
+// Commit is a commit with the files it touched.
+type Commit struct {
+	Hash    string       `json:"hash"`
+	Author  string       `json:"author"`
+	Time    time.Time    `json:"time"`
+	Message string       `json:"message"`
+	Files   []FileChange `json:"files"`
+}
+
+// LogAll returns every commit since a date (zero = all), oldest first,
+// with renames detected.
+func (g *Git) LogAll(since time.Time) ([]Commit, error) {
+	args := []string{"log", "--reverse", "-M", "--name-status", "--format=\x01%H\x02%an\x02%at\x02%s"}
+	if !since.IsZero() {
+		args = append(args, "--since="+since.Format(time.RFC3339))
+	}
+	out, err := g.run(nil, nil, args...)
+	if err != nil {
+		return nil, err
+	}
+	var res []Commit
+	for _, block := range strings.Split(string(out), "\x01") {
+		lines := strings.Split(strings.TrimSpace(block), "\n")
+		if len(lines) == 0 || lines[0] == "" {
+			continue
+		}
+		revs := parseRevs([]byte(lines[0]))
+		if len(revs) == 0 {
+			continue
+		}
+		c := Commit{Hash: revs[0].Hash, Author: revs[0].Author, Time: revs[0].Time, Message: revs[0].Message}
+		for _, l := range lines[1:] {
+			f := strings.Split(strings.TrimSpace(l), "\t")
+			if len(f) < 2 || f[0] == "" {
+				continue
+			}
+			fc := FileChange{Status: f[0][:1], Path: f[len(f)-1]}
+			if fc.Status == "R" && len(f) == 3 {
+				fc.From = f[1]
+			}
+			c.Files = append(c.Files, fc)
+		}
+		res = append(res, c)
+	}
+	return res, nil
+}

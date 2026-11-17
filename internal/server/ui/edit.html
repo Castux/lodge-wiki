@@ -1,13 +1,14 @@
-<form method="post" action="/_/edit/{{.ID}}" class="lw-editor" data-preview="/_/preview/{{.ID}}">
+<form method="post" action="/_/edit/{{.ID}}" class="lw-editor{{if .IsData}} lw-data{{end}}" data-preview="/_/preview/{{.ID}}">
   <div class="lw-editor-head">
     <h1>{{if .Exists}}Editing{{else}}Creating{{end}} <a href="{{.URL}}">{{.ID}}</a></h1>
-    <div class="lw-editor-tabs" role="tablist">
+    {{if not .IsData}}<div class="lw-editor-tabs" role="tablist">
       <button type="button" data-tab="write" class="lw-tab lw-active">Write</button>
       <button type="button" data-tab="preview" class="lw-tab">Preview</button>
       <button type="button" data-tab="split" class="lw-tab">Side by side</button>
       <a href="/_/static/help.html" target="_blank" class="lw-help">Syntax help</a>
-    </div>
+    </div>{{else}}<p class="lw-quiet">Data file (JSON), used by widgets.</p>{{end}}
   </div>
+  {{if .Error}}<p class="lw-error">{{.Error}}</p>{{end}}
   {{if .Conflict}}
   <div class="lw-conflict">
     <p><strong>Someone else saved this page while you were editing.</strong> Your text is below; theirs is shown here. Merge what you need, then save again.</p>
@@ -23,6 +24,6 @@
     <input name="summary" class="lw-summary" placeholder="Summary of the change (optional)" value="{{.Summary}}" maxlength="200">
     <button type="submit" class="lw-button lw-primary">Save</button>
     <a href="{{.URL}}" class="lw-button">Cancel</a>
-    <span class="lw-hint">Saving an empty page deletes it.</span>
+    <span class="lw-hint">Saving an empty {{if .IsData}}file{{else}}page{{end}} deletes it.</span>
   </div>
 </form>
