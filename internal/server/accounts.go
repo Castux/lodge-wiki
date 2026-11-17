@@ -1,76 +1,16 @@
 package server
 
 import (
-	"bufio"
 	"fmt"
 	"net"
 	"net/http"
 	"net/url"
-	"os"
 	"sort"
 	"strings"
 	"time"
 
 	"golang.org/x/crypto/bcrypt"
 )
-
-// ImportDokuWiki adds the accounts of a DokuWiki users.auth.php file
-// (user:hash:Real Name:email:groups). Hashes are kept as they are, so
-// people keep their passwords (DokuWiki used bcrypt). Groups map to roles:
-// admin → admin, user → editor, anything else → pending. Accounts listed in
-// skip (by user name or group), and accounts that already exist here, are
-// left alone.
-func (a *Auth) ImportDokuWiki(file string, skip map[string]bool, author string) (added []string, err error) {
-	f, err := os.Open(file)
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-	a.mu.Lock()
-	defer a.mu.Unlock()
-	sc := bufio.NewScanner(f)
-	for sc.Scan() {
-		line := strings.TrimSpace(sc.Text())
-		if line == "" || strings.HasPrefix(line, "#") {
-			continue
-		}
-		p := strings.Split(line, ":")
-		if len(p) < 5 || skip[p[0]] || a.users[p[0]] != nil {
-			continue
-		}
-		skipped := false
-		for _, g := range strings.Split(p[4], ",") {
-			skipped = skipped || skip[strings.TrimSpace(g)]
-		}
-		if skipped {
-			continue // service accounts (map token, notifier bot)
-		}
-		if !strings.HasPrefix(p[1], "$2") {
-			continue // not bcrypt: cannot be checked here
-		}
-		role := RolePending
-		for _, g := range strings.Split(p[4], ",") {
-			switch strings.TrimSpace(g) {
-			case "admin":
-				role = RoleAdmin
-			case "user":
-				if role < RoleEditor {
-					role = RoleEditor
-				}
-			}
-		}
-		a.users[p[0]] = &User{Name: p[0], Hash: p[1], Role: role, RealName: p[2], Email: p[3]}
-		added = append(added, p[0])
-	}
-	if err := sc.Err(); err != nil {
-		return nil, err
-	}
-	sort.Strings(added)
-	if len(added) == 0 {
-		return nil, nil
-	}
-	return added, a.saveLocked(author, fmt.Sprintf("accounts: import %d from DokuWiki", len(added)))
-}
 
 // List returns the accounts sorted by name.
 func (a *Auth) List() []User {

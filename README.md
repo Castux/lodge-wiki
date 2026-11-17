@@ -24,12 +24,6 @@ Then open http://localhost:8080. On the first start it creates an `admin` accoun
 go run . --root ../lodge-data --set-password admin
 ```
 
-To bring over the DokuWiki accounts (everyone keeps their password):
-
-```sh
-go run . --root ../lodge-data --import-users ../public_html/conf/users.auth.php
-```
-
 Everything that matters (pages, data, layouts, widgets, accounts in `_config/users.json`) is in the content repo; media is in `_media/` next to it. The state folder (default `../lodge-state`, set with `--state`) only holds the session key and the scaled-image cache: it can be deleted at any time (everyone is logged out). Keep the content repo private: it holds password hashes and emails.
 
 | Flag | Default | Meaning |

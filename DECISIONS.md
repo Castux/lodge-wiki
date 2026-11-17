@@ -63,7 +63,7 @@ Calls made while building, with the reason. Newest at the bottom of each section
 
 ## Accounts
 
-- **The DokuWiki accounts are imported with their password hashes** (`--import-users ../public_html/conf/users.auth.php`), so everyone keeps their password (all 43 are bcrypt, which Go checks directly). Groups map to roles: `admin` → admin (3), `user` → editor (25), anything else → **pending** (15: registered but never approved in DokuWiki, several look like spam). Service accounts (`carto`, the notifier bot) are skipped by group. Accounts live in the content repo (see below).
+- **The DokuWiki accounts are imported with their password hashes** (a one-off import, done on 2026-11-18; the code is in the git history), so everyone keeps their password (all 43 are bcrypt, which Go checks directly). Groups map to roles: `admin` → admin (3), `user` → editor (25), anything else → **pending** (15: registered but never approved in DokuWiki, several look like spam). Service accounts (`carto`, the notifier bot) are skipped by group. Accounts live in the content repo (see below).
 - **Roles: pending (no access, sees "waiting for approval"), reader, editor, admin.** Admins manage accounts on `/_/users` (role, new password, delete, add); everyone can change their own password on `/_/account`. Changing a password logs out that account's other sessions. Deleting an account keeps its edits in the history under its name.
 - **Failed logins are limited to 8 a minute per address.** User names are case-insensitive.
 - **Discord login is postponed:** it needs a Discord application (client id and secret) and the wiki's public address for the OAuth redirect.
