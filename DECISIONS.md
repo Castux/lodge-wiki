@@ -42,3 +42,16 @@ Calls made while building, with the reason. Newest at the bottom of each section
 - **`list` blocks have three extra keys** beyond the spec, from nspages options: `natural: true`, `label: "{title} ({user})"`, `dates: true`. `-simplelist` becomes `columns: 1`. Without `-textPages` the heading is "Pages in this namespace:", nspages' default.
 - **Raw HTML blocks lose their inner blank lines** (except in `<pre>`), so CommonMark keeps each as one HTML block; an HTML-only first line of a paragraph (usually an aligned `<img>`) is split into its own block.
 - **Broken DokuWiki source stays broken** (e.g. a link split over two lines); indented lines DokuWiki showed as code stay code.
+
+## Interface (functional changes from the old wiki)
+
+- **The pencil icon opens the editor directly** (one click instead of two). A new menu icon (☰) opens the old slide-in tools panel: page tools (edit, history, backlinks), site tools (recent changes, index) and log in/out. Opening a page with `#menu` opens the panel. Keyboard: `e` edits, `/` searches, `Alt+F` toggles the search box, `Ctrl+S` saves in the editor.
+- **Breadcrumbs show where the page sits** (Home › Fool's Landing › Stories › Page) instead of DokuWiki's trail of recently visited pages. The "You are here" label is hidden.
+- **The footer reads "Last modified: date by author · history"**, linking to the page history.
+- **The editor is a plain text area with Write / Preview / Side by side tabs** (the choice is remembered), live preview, an optional summary, and a warning before leaving with unsaved changes. A page edited by someone else meanwhile is never overwritten: the editor shows both versions. Saving an empty page deletes it (as in DokuWiki).
+- **History lists every change with author, summary and age**, each with "changes" (diff), "view" (old version) and "restore" (creates a new edit; nothing is lost).
+- **Search redirects straight to a page whose title matches exactly**; otherwise it lists results with a snippet.
+- **A namespace without a start page shows an automatic list of its pages**, and links to it are no longer red.
+- **Data files (`.json`) can be edited in the browser** (`/_/edit/path.json`) and are checked to be valid JSON before saving.
+- **Old DokuWiki URLs redirect**: `/doku.php?id=a:b` and `/a:b` go to `/a/b`.
+- **Development flags**: `--public` allows reading without logging in; `--as <user>` makes every request act as that user (screenshots and local testing only).
