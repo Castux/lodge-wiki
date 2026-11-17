@@ -10,6 +10,7 @@
     const out = form.querySelector(".lw-preview .page");
     const isFile = form.classList.contains("lw-file");
     let dirty = false, timer = null, mode = localStorage.getItem("lw-editor-mode") || "write";
+    if (["#write", "#preview", "#split"].includes(location.hash)) mode = location.hash.slice(1);
     // Non-page files (JSON, CSS, JS...) have no preview: always the text.
     if (isFile) mode = "write";
 

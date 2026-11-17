@@ -26,7 +26,7 @@
 .lw-mode-preview { grid-template-columns: 1fr; } .lw-mode-preview .lw-text { display: none; }
 .lw-mode-split { grid-template-columns: 1fr 1fr; }
 .lw-text { width: 100%; min-height: 65vh; box-sizing: border-box; padding: .7em; font: 14px/1.5 ui-monospace, Consolas, monospace; border: 1px solid #b9b2a4; border-radius: 0 4px 4px 4px; resize: vertical; tab-size: 4; }
-.lw-preview { min-height: 65vh; max-height: 80vh; overflow: auto; padding: 0 1em; border: 1px dashed #b9b2a4; border-radius: 4px; background: rgba(255,255,255,.5); }
+.lw-preview { --page-pad: 1em; min-height: 65vh; max-height: 80vh; overflow: auto; padding: 0 var(--page-pad); border: 1px dashed #b9b2a4; border-radius: 4px; background: rgba(255,255,255,.5); }
 .lw-editor-foot { display: flex; flex-wrap: wrap; gap: .5em; align-items: center; margin-top: .7em; }
 .lw-summary { flex: 1 1 20em; padding: .4em; font: inherit; border: 1px solid #b9b2a4; border-radius: 4px; }
 .lw-hint { color: #777; font-size: .85em; }

@@ -28,7 +28,7 @@ func (s *Server) preview(w http.ResponseWriter, r *http.Request) {
 	body, _ := io.ReadAll(io.LimitReader(r.Body, 4<<20))
 	res := s.render.RenderSnippet(id, body)
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	io.WriteString(w, res.TOC+res.HTML)
+	io.WriteString(w, res.HTML) // the table of contents is the layout's business
 }
 
 func (s *Server) history(w http.ResponseWriter, r *http.Request) {
