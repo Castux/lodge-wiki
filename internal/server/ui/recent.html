@@ -1,0 +1,10 @@
+<h1>Recent changes</h1>
+<div class="level1">
+<ul class="lw-recent">
+{{range $c := .Changes}}
+<li><span class="lw-quiet" title="{{date .Time}}">{{ago .Time}}</span> · <strong>{{.Author}}</strong> ·
+{{range $i, $p := .Pages}}{{if $i}}, {{end}}<a href="{{pageurl $p}}" class="{{if $.Store.Exists $p}}wikilink1{{else}}wikilink2{{end}}">{{$t := $.Store.Title $p}}{{if $t}}{{$t}}{{else}}{{$p}}{{end}}</a> <a href="/_/diff/{{$p}}?rev={{$c.Hash}}" class="lw-quiet">(diff)</a>{{end}}
+{{if .Message}}<span class="lw-quiet">· {{.Message}}</span>{{end}}</li>
+{{end}}
+</ul>
+</div>

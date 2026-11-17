@@ -1,0 +1,66 @@
+/* Core UI: editor, history, diff, search. Layout CSS is in the content repo. */
+.lw-button { display: inline-block; padding: .35em .9em; border: 1px solid #b9b2a4; border-radius: 4px; background: #fbfaf6; color: #222 !important; font: inherit; cursor: pointer; text-decoration: none !important; }
+.lw-button:hover { background: #fff; border-color: #8a8173; }
+.lw-primary { background: #660000; border-color: #660000; color: #fff !important; }
+.lw-primary:hover { background: #800; border-color: #800; }
+.lw-link { background: none; border: 0; padding: 0; color: inherit; font: inherit; cursor: pointer; text-decoration: underline; }
+.lw-inline { display: inline; margin: 0; }
+.lw-quiet { color: #777; font-size: .92em; }
+.lw-error { color: #a00; font-weight: bold; }
+.lw-note { padding: .6em 1em; margin: 0 0 1em; border-left: 4px solid #c90; background: #fff8e1; }
+
+.lw-form label { display: block; margin: .6em 0; }
+.lw-form input { display: block; width: 100%; max-width: 22em; padding: .4em; font: inherit; border: 1px solid #b9b2a4; border-radius: 4px; box-sizing: border-box; }
+.lw-searchform input { display: inline-block; max-width: 30em; }
+.lw-login { max-width: 22em; }
+
+/* Editor */
+.lw-editor-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: .5em; }
+.lw-editor-head h1 { margin: 0 0 .4em; }
+.lw-editor-tabs { display: flex; gap: .25em; align-items: center; }
+.lw-tab { padding: .3em .8em; border: 1px solid #ccc5b6; border-radius: 4px 4px 0 0; background: #eeeadf; font: inherit; cursor: pointer; }
+.lw-tab.lw-active { background: #fff; border-bottom-color: #fff; font-weight: bold; }
+.lw-help { margin-left: .8em; font-size: .9em; }
+.lw-editor-panes { display: grid; gap: 1em; }
+.lw-mode-write { grid-template-columns: 1fr; } .lw-mode-write .lw-preview { display: none; }
+.lw-mode-preview { grid-template-columns: 1fr; } .lw-mode-preview .lw-text { display: none; }
+.lw-mode-split { grid-template-columns: 1fr 1fr; }
+.lw-text { width: 100%; min-height: 65vh; box-sizing: border-box; padding: .7em; font: 14px/1.5 ui-monospace, Consolas, monospace; border: 1px solid #b9b2a4; border-radius: 0 4px 4px 4px; resize: vertical; tab-size: 4; }
+.lw-preview { min-height: 65vh; max-height: 80vh; overflow: auto; padding: 0 1em; border: 1px dashed #b9b2a4; border-radius: 4px; background: rgba(255,255,255,.5); }
+.lw-editor-foot { display: flex; flex-wrap: wrap; gap: .5em; align-items: center; margin-top: .7em; }
+.lw-summary { flex: 1 1 20em; padding: .4em; font: inherit; border: 1px solid #b9b2a4; border-radius: 4px; }
+.lw-hint { color: #777; font-size: .85em; }
+.lw-conflict { padding: .5em 1em; margin-bottom: 1em; border: 2px solid #c60; background: #fff4e5; }
+.lw-conflict textarea { width: 100%; box-sizing: border-box; font: 13px/1.4 ui-monospace, Consolas, monospace; }
+@media (max-width: 800px) { .lw-mode-split { grid-template-columns: 1fr; } }
+
+/* History and diff */
+table.lw-history { border-collapse: collapse; width: 100%; }
+table.lw-history th, table.lw-history td { text-align: left; padding: .3em .6em; border-bottom: 1px solid #ddd6c8; vertical-align: top; }
+.lw-actions { white-space: nowrap; }
+pre.lw-diff { white-space: pre-wrap; word-break: break-word; font: 13px/1.45 ui-monospace, Consolas, monospace; background: #fff; border: 1px solid #ddd6c8; padding: .5em; }
+pre.lw-diff span { display: block; padding: 0 .4em; }
+.lw-add { background: #e6ffec; } .lw-add::before { content: "+ "; color: #1a7f37; }
+.lw-del { background: #ffebe9; } .lw-del::before { content: "− "; color: #cf222e; }
+.lw-ctx::before { content: "  "; }
+.lw-hunk { color: #888; background: #f3f1ea; margin: .4em 0; }
+
+/* Lists of things */
+.lw-recent li, .lw-hits li { margin: .35em 0; }
+.lw-snippet { color: #555; font-size: .92em; }
+.lw-index ul { list-style: none; padding-left: 1.2em; }
+.lw-index summary { cursor: pointer; }
+
+/* Table of contents collapse */
+.dw__toc.lw-closed > div { display: none; }
+.dw__toc h3.toggle { cursor: pointer; }
+
+/* Widgets */
+.widget { margin: 1em 0; }
+
+/* Fallback layout when a namespace has none */
+.lw-default { max-width: 60em; margin: 0 auto; padding: 0 1em; font: 15px/1.5 Georgia, serif; }
+.lw-bar { display: flex; flex-wrap: wrap; gap: 1em; align-items: center; padding: .6em 0; border-bottom: 1px solid #ccc; }
+.lw-site { font-weight: bold; font-size: 1.3em; text-decoration: none; }
+.lw-tools { display: flex; gap: .8em; flex-wrap: wrap; margin-left: auto; }
+.lw-pageinfo { margin: 2em 0; color: #777; font-size: .85em; border-top: 1px solid #ddd; padding-top: .5em; }

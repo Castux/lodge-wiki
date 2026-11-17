@@ -1,0 +1,11 @@
+<h1>Changes to <a href="{{.URL}}">{{.ID}}</a></h1>
+<div class="level1">
+<p class="lw-quiet">{{if .Rev.Hash}}{{date .Rev.Time}} by <strong>{{.Rev.Author}}</strong>: {{.Rev.Message}} · {{end}}<a href="/_/history/{{.Path}}">Back to history</a>
+{{if and .CanEdit .Rev.Hash}} ·
+<form method="post" action="/_/revert/{{.Path}}" class="lw-inline" onsubmit="return confirm('Restore the version from this edit? This creates a new edit; nothing is lost.')">
+  <input type="hidden" name="rev" value="{{.Rev.Hash}}"><button type="submit" class="lw-link">restore this version</button>
+</form>{{end}}</p>
+{{if not .Lines}}<p>No changes to the text in this edit.</p>{{else}}
+<pre class="lw-diff">{{range .Lines}}<span class="lw-{{.Kind}}">{{.Text}}</span>
+{{end}}</pre>{{end}}
+</div>

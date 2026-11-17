@@ -1,0 +1,6 @@
+<h1>Search</h1>
+<div class="level1">
+<form action="/_/search" class="lw-form lw-searchform"><input name="q" value="{{.Q}}" autofocus placeholder="Search the wiki"><input type="hidden" name="all" value="1"> <button class="lw-button">Search</button></form>
+{{if .Q}}<p class="lw-quiet">{{len .Hits}} result{{if ne (len .Hits) 1}}s{{end}} for “{{.Q}}”</p>
+<ul class="lw-hits">{{range .Hits}}<li><a href="{{pageurl .Page.ID}}" class="wikilink1">{{.Page.Title}}</a> <span class="lw-quiet">{{.Page.ID}}</span><br><span class="lw-snippet">{{.Snippet}}</span></li>{{end}}</ul>{{end}}
+</div>

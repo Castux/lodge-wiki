@@ -1,0 +1,25 @@
+<h1>History of <a href="{{.URL}}">{{.ID}}</a></h1>
+<div class="level1">
+{{if not .Revs}}<p>No history for this page.</p>{{else}}
+<table class="lw-history">
+  <thead><tr><th>When</th><th>Who</th><th>Summary</th><th></th></tr></thead>
+  <tbody>
+  {{range $i, $r := .Revs}}
+  <tr>
+    <td title="{{date $r.Time}}">{{date $r.Time}} <span class="lw-quiet">({{ago $r.Time}})</span></td>
+    <td>{{$r.Author}}</td>
+    <td>{{$r.Message}}</td>
+    <td class="lw-actions">
+      <a href="/_/diff/{{$.Path}}?rev={{$r.Hash}}">changes</a> ·
+      <a href="/_/rev/{{$.Path}}?rev={{$r.Hash}}">view</a>
+      {{if and $.CanEdit (gt $i 0)}} ·
+      <form method="post" action="/_/revert/{{$.Path}}" class="lw-inline" onsubmit="return confirm('Restore this version? This creates a new edit; nothing is lost.')">
+        <input type="hidden" name="rev" value="{{$r.Hash}}"><button type="submit" class="lw-link">restore</button>
+      </form>{{end}}
+    </td>
+  </tr>
+  {{end}}
+  </tbody>
+</table>
+{{end}}
+</div>

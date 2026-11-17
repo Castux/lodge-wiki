@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{{.Title}} [{{.SiteTitle}}]</title>
+{{range .Styles}}<link rel="stylesheet" href="{{.}}">{{end}}
+{{.Head}}
+</head>
+<body>
+<div class="dokuwiki lw-default">
+<header class="lw-bar"><a href="/" class="lw-site">{{.SiteTitle}}</a>
+<form action="/_/search" class="lw-search"><input name="q" placeholder="Search"></form>
+<nav class="lw-tools">{{range .Tools}}{{if .Post}}<form method="post" action="{{.URL}}" class="lw-inline"><button class="lw-link">{{.Label}}</button></form>{{else}}<a href="{{.URL}}" data-tool="{{.Name}}"{{if .Active}} class="lw-active"{{end}}>{{.Label}}</a>{{end}}{{end}}</nav></header>
+<nav class="breadcrumbs">{{range .Crumbs}}{{if .Last}}<span class="curid">{{.Title}}</span>{{else}}<a href="{{.URL}}">{{.Title}}</a> › {{end}}{{end}}</nav>
+<main class="page">{{.TOC}}{{.Content}}</main>
+{{if .Exists}}<footer class="lw-pageinfo">{{.ID}} · Last modified: {{date .Modified}}{{if .Author}} by {{.Author}}{{end}}</footer>{{end}}
+</div>
+{{.Scripts}}
+</body>
+</html>
