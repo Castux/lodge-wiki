@@ -37,7 +37,7 @@ type View struct {
 	User      string
 	CanEdit   bool
 	Styles    []string // stylesheet URLs, outermost first
-	Layout    string   // URL of the nearest layout folder, for assets
+	Layout    string   // URL of the layout folder holding page.html (its script and assets)
 	Head      template.HTML
 	Scripts   template.HTML
 	Tools     []Tool
@@ -157,7 +157,7 @@ func (s *Server) show(w http.ResponseWriter, r *http.Request, v *View) {
 		}
 	}
 	if len(dirs) > 0 {
-		v.Layout = "/" + dirs[len(dirs)-1] + "/"
+		v.Layout = "/" + dirs[0] + "/"
 	}
 	v.Head = template.HTML(`<link rel="stylesheet" href="/_/static/core.css">`)
 	var scripts strings.Builder
