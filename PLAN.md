@@ -237,9 +237,9 @@ Each phase ends in something usable, and at a gate where you decide whether to c
 
 Before going live:
 
-- [ ] **Notifications**: declarative webhook rules in  (events, namespaces, message template, as the old lodgenotifier), sent by the core after each commit. Discord first.
-- [ ] **Deployment**: VPS, Caddy for HTTPS, systemd service,  to the private GitHub remote after each commit (deploy key or ), restic for media.
-- [ ] **Media backup tool**:  reading , copying missing or changed files (and the bin), then verifying hashes. Decide the transport (rsync/SFTP on the server's , or HTTP as an admin, which needs an admin-only way to fetch bin files).
+- [ ] **Notifications**: declarative webhook rules in `_config/` (events, namespaces, message template, as the old lodgenotifier), sent by the core after each commit. Discord first.
+- [ ] **Deployment**: VPS, Caddy for HTTPS, systemd service, `--push` to the private GitHub remote after each commit (deploy key or `gh auth setup-git`), restic for media.
+- [ ] **Media backup tool**: `lodge-wiki backup-media --from <server> --to <folder>` reading `_config/media.json`, copying missing or changed files (and the bin), then verifying hashes. Decide the transport (rsync/SFTP on the server's `_media`, or HTTP as an admin, which needs an admin-only way to fetch bin files).
 - [ ] **Security before going public**: CSRF tokens on forms; HTTP handler tests.
 
 Browsing (software and layout only, no content changes):
@@ -255,4 +255,4 @@ Later:
 - [ ] **Discord login**: needs a Discord application (client id, secret) and the public address for the redirect.
 - [ ] Empty the media bin (admins).
 - [ ] Image size and alignment from the editor's image picker.
-- [ ] Ideas that need content edits, once the old wiki is retired: a campaign navigation bar per campaign (), "recently updated" on campaign home pages ( on  blocks), page templates for new logs and stories, character infoboxes from frontmatter.
+- [ ] Ideas that need content edits, once the old wiki is retired: a navigation bar per campaign (`_layout/nav.md`), "recently updated" on campaign home pages (`limit` on `list` blocks), page templates for new logs and stories, character infoboxes from frontmatter.
