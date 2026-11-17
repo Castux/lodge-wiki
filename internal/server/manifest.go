@@ -210,6 +210,14 @@ func (s *Server) SyncMediaManifest() {
 			removed++
 		}
 	}
+	// A missing or half-copied media folder (fresh server, unmounted
+	// disk) must not be recorded as mass deletion: a backup tool trusting
+	// the manifest could then drop its copies.
+	if removed > 20 && removed*2 > len(before.Files) {
+		log.Printf("media manifest NOT updated: %d of %d listed files are missing from %s. Is the media folder in place? Restore it, or delete the files through the wiki.",
+			removed, len(before.Files), s.store.File("_media"))
+		return
+	}
 	msg := fmt.Sprintf("media: update the manifest (%d added, %d changed, %d removed)", added, changed, removed)
 	if _, err := s.store.Git.Write(MediaManifestFile, nu, "-", "lodge-wiki", msg); err != nil {
 		log.Printf("media manifest: %v", err)

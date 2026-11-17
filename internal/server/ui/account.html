@@ -1,10 +1,21 @@
 <h1>Your account</h1>
 <div class="level1">
 <p><strong>{{.User.Name}}</strong>{{if .User.RealName}} ({{.User.RealName}}){{end}} · {{.Role}}</p>
-{{if .Saved}}<p class="lw-note">Password changed. You stay logged in here; other devices are logged out.</p>{{end}}
+{{if eq .Saved "profile"}}<p class="lw-note">Profile saved.</p>{{else if .Saved}}<p class="lw-note">Password changed. You stay logged in here; other devices are logged out.</p>{{end}}
+{{if .Error}}<p class="lw-error">{{.Error}}</p>{{end}}
+
+<form method="post" action="/_/account" class="lw-form">
+  <h2>Profile</h2>
+  <input type="hidden" name="action" value="profile">
+  <label>Real name <input name="realname" value="{{.User.RealName}}" autocomplete="name"></label>
+  <label>Email <input type="email" name="email" value="{{.User.Email}}" autocomplete="email"></label>
+  <p class="lw-quiet">Only admins can see these.</p>
+  <button class="lw-button lw-primary">Save profile</button>
+</form>
+
 <form method="post" action="/_/account" class="lw-form">
   <h2>Change your password</h2>
-  {{if .Error}}<p class="lw-error">{{.Error}}</p>{{end}}
+  <input type="hidden" name="action" value="password">
   <label>Current password <input type="password" name="old" autocomplete="current-password" required></label>
   <label>New password <input type="password" name="new" autocomplete="new-password" minlength="8" required></label>
   <label>New password again <input type="password" name="again" autocomplete="new-password" minlength="8" required></label>

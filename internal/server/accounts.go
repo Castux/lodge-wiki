@@ -133,7 +133,7 @@ func (s *Server) accountPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.show(w, r, &View{ID: "_account", Title: "Your account", Mode: "account",
-		Content: s.ui_("account.html", map[string]any{"User": u, "Role": RoleNames[u.Role], "Saved": r.URL.Query().Get("saved") != ""})})
+		Content: s.ui_("account.html", map[string]any{"User": u, "Role": RoleNames[u.Role], "Saved": r.URL.Query().Get("saved")})})
 }
 
 func (s *Server) accountSave(w http.ResponseWriter, r *http.Request) {
@@ -146,6 +146,20 @@ func (s *Server) accountSave(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		s.show(w, r, &View{ID: "_account", Title: "Your account", Mode: "account",
 			Content: s.ui_("account.html", map[string]any{"User": u, "Role": RoleNames[u.Role], "Error": msg})})
+	}
+	if r.FormValue("action") == "profile" {
+		name := strings.TrimSpace(r.FormValue("realname"))
+		email := strings.TrimSpace(r.FormValue("email"))
+		if email != "" && (!strings.Contains(email, "@") || strings.ContainsAny(email, " :")) {
+			fail("That email address does not look right.")
+			return
+		}
+		if err := s.auth.Update(u.Name, u.Name, "accounts: profile of "+u.Name, func(x *User) { x.RealName, x.Email = name, email }); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		http.Redirect(w, r, "/_/account?saved=profile", http.StatusSeeOther)
+		return
 	}
 	if s.auth.Check(u.Name, r.FormValue("old")) == nil {
 		fail("Your current password is not right.")
