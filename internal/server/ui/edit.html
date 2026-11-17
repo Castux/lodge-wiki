@@ -1,4 +1,5 @@
-<form method="post" action="/_/edit/{{.ID}}" class="lw-editor{{if .IsFile}} lw-file{{end}}" data-preview="/_/preview/{{.ID}}">
+<link rel="stylesheet" href="/_/static/cm.css"><script src="/_/static/cm.js"></script>
+<form method="post" action="/_/edit/{{.ID}}" class="lw-editor{{if .IsFile}} lw-file{{end}}" data-preview="/_/preview/{{.ID}}" data-lang="{{.Lang}}">
   <div class="lw-editor-head">
     {{if .IsFile}}<h1>{{if .Exists}}Editing{{else}}Creating{{end}} <code>{{.File}}</code></h1>
     <p class="lw-quiet">{{.Lang}} file{{if .Exists}} · <a href="/_/history/{{.ID}}">history</a>{{end}} · <a href="{{.URL}}">back to the folder</a></p>

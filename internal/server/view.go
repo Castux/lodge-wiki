@@ -157,7 +157,11 @@ func (s *Server) show(w http.ResponseWriter, r *http.Request, v *View) {
 		v.Modified, v.Author = p.Modified, p.Author
 	}
 	v.Backlinks = len(idx.Backlinks[v.ID])
-	v.Crumbs = s.crumbs(v.ID, v.Title)
+	if isFile(v.ID) {
+		v.Crumbs = fileCrumbs(v.ID, v.Title)
+	} else {
+		v.Crumbs = s.crumbs(v.ID, v.Title)
+	}
 
 	dirs := s.layoutDirs(v.ID)
 	for _, d := range dirs {
@@ -262,4 +266,16 @@ func (s *Server) tools(v *View) []Tool {
 		t = append(t, Tool{Name: "login", Label: "Log in", URL: "/_/login?next=" + v.URL})
 	}
 	return t
+}
+
+// fileCrumbs is the trail for non-page files: Files › folder › … › title.
+func fileCrumbs(file, title string) []Crumb {
+	out := []Crumb{{Title: "Files", URL: "/_/files"}}
+	acc := ""
+	segs := strings.Split(file, "/")
+	for _, seg := range segs[:len(segs)-1] {
+		acc = strings.TrimPrefix(acc+"/"+seg, "/")
+		out = append(out, Crumb{Title: seg, URL: "/_/files?dir=" + acc})
+	}
+	return append(out, Crumb{Title: title, Last: true})
 }

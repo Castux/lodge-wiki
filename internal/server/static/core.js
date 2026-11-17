@@ -2,14 +2,54 @@
   "use strict";
 
   // Editor: write / preview / side-by-side, live preview, Ctrl+S, unsaved-changes guard.
+  // Uses CodeMirror (syntax highlighting) when it is loaded, else the plain textarea.
   const form = document.querySelector(".lw-editor");
   if (form) {
     const panes = form.querySelector(".lw-editor-panes");
     const text = form.querySelector(".lw-text");
     const out = form.querySelector(".lw-preview .page");
+    const isFile = form.classList.contains("lw-file");
     let dirty = false, timer = null, mode = localStorage.getItem("lw-editor-mode") || "write";
     // Non-page files (JSON, CSS, JS...) have no preview: always the text.
-    if (form.classList.contains("lw-file")) mode = "write";
+    if (isFile) mode = "write";
+
+    let cm = null;
+    const MODES = {
+      markdown: { name: "yaml-frontmatter", base: { name: "gfm", fencedCodeBlockHighlighting: true } },
+      javascript: "javascript", json: { name: "javascript", json: true }, css: "css",
+      html: "htmlmixed", yaml: "yaml", svg: "xml", text: null,
+    };
+    const save = () => { dirty = false; if (cm) cm.save(); form.submit(); };
+    if (window.CodeMirror) {
+      // `list` and `widget` blocks hold YAML settings.
+      const find = CodeMirror.findModeByName;
+      CodeMirror.findModeByName = n => (n === "list" || n === "widget" ? find("yaml") : find(n));
+      cm = CodeMirror.fromTextArea(text, {
+        mode: MODES[form.dataset.lang || "markdown"],
+        lineWrapping: !isFile,
+        lineNumbers: isFile,
+        styleActiveLine: isFile,
+        matchBrackets: true,
+        autoCloseBrackets: isFile,
+        indentUnit: isFile ? 2 : 4,
+        tabSize: 4,
+        indentWithTabs: false,
+        viewportMargin: 50,
+        extraKeys: {
+          Tab: c => c.somethingSelected() ? c.indentSelection("add") : c.replaceSelection(" ".repeat(c.getOption("indentUnit"))),
+          "Shift-Tab": c => c.indentSelection("subtract"),
+          "Ctrl-S": save, "Cmd-S": save,
+        },
+      });
+      cm.on("change", () => { cm.save(); text.dispatchEvent(new Event("input")); });
+      cm.focus();
+    }
+    window.lwInsert = snippet => {
+      if (cm) { cm.replaceSelection(snippet); cm.focus(); return; }
+      text.setRangeText(snippet, text.selectionStart, text.selectionEnd, "end");
+      text.focus();
+      text.dispatchEvent(new Event("input"));
+    };
 
     async function preview() {
       const res = await fetch(form.dataset.preview, { method: "POST", body: text.value, credentials: "same-origin" });
@@ -17,10 +57,11 @@
     }
     function setMode(m) {
       mode = m;
-      if (!form.classList.contains("lw-file")) localStorage.setItem("lw-editor-mode", m);
+      if (!isFile) localStorage.setItem("lw-editor-mode", m);
       panes.className = "lw-editor-panes lw-mode-" + m;
       form.querySelectorAll(".lw-tab").forEach(b => b.classList.toggle("lw-active", b.dataset.tab === m));
       if (m !== "write") preview();
+      if (cm) cm.refresh();
     }
     form.querySelectorAll(".lw-tab").forEach(b => b.addEventListener("click", () => setMode(b.dataset.tab)));
     setMode(mode);
@@ -30,20 +71,17 @@
       clearTimeout(timer);
       timer = setTimeout(preview, 400);
     });
-    // Tab inserts spaces in lists and code instead of leaving the field.
-    text.addEventListener("keydown", e => {
-      if (e.key === "Tab" && !e.ctrlKey && !e.altKey) {
-        e.preventDefault();
-        const s = text.selectionStart, en = text.selectionEnd;
-        text.setRangeText("    ", s, en, "end");
-        dirty = true;
-      }
-      if ((e.ctrlKey || e.metaKey) && e.key === "s") {
-        e.preventDefault();
-        dirty = false;
-        form.submit();
-      }
-    });
+    if (!cm) {
+      // Plain textarea: Tab inserts spaces, Ctrl+S saves.
+      text.addEventListener("keydown", e => {
+        if (e.key === "Tab" && !e.ctrlKey && !e.altKey) {
+          e.preventDefault();
+          text.setRangeText("    ", text.selectionStart, text.selectionEnd, "end");
+          dirty = true;
+        }
+        if ((e.ctrlKey || e.metaKey) && e.key === "s") { e.preventDefault(); save(); }
+      });
+    }
     form.addEventListener("submit", () => { dirty = false; });
     window.addEventListener("beforeunload", e => { if (dirty) { e.preventDefault(); e.returnValue = ""; } });
   }
@@ -87,10 +125,7 @@
   function insert(file) {
     const alt = file.name.replace(/\.[^.]+$/, "").replace(/[-_]/g, " ");
     const snippet = file.image ? `![${alt}](${file.url})` : `[${file.name}](${file.url})`;
-    const s = text.selectionStart, e = text.selectionEnd;
-    text.setRangeText(snippet, s, e, "end");
-    text.focus();
-    text.dispatchEvent(new Event("input"));
+    window.lwInsert(snippet);
   }
 
   async function load() {

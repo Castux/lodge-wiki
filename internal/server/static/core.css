@@ -90,3 +90,16 @@ pre.lw-diff span { display: block; padding: 0 .4em; min-height: 1.45em; }
 .lw-mediaactions { font-size: .95em; }
 .lw-check { display: flex !important; gap: .4em; align-items: center; }
 .lw-check input { width: auto !important; display: inline !important; }
+
+/* Code editor (CodeMirror) */
+.lw-editor .CodeMirror { height: 65vh; border: 1px solid #b9b2a4; border-radius: 0 4px 4px 4px; font: 14px/1.5 ui-monospace, Consolas, monospace; background: #fff; }
+.lw-editor .CodeMirror-gutters { background: #f6f4ee; border-right-color: #e2ddd0; }
+.lw-mode-preview .CodeMirror { display: none; }
+.lw-editor-panes > .CodeMirror { min-width: 0; }
+.lw-editor .cm-s-default .cm-header { color: #660000; }
+.lw-editor .cm-header-1 { font-size: 1.25em; }
+.lw-editor .cm-header-2 { font-size: 1.12em; }
+.lw-editor .cm-s-default .cm-link, .lw-editor .cm-s-default .cm-url { color: #0b5394; }
+.lw-editor .cm-s-default .cm-quote { color: #6a737d; font-style: italic; }
+.lw-editor .CodeMirror-activeline-background { background: #fbf8ef; }
+.lw-editor .CodeMirror-matchingbracket { background: #e6f0d8; color: inherit !important; }
