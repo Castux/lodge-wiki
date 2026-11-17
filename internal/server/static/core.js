@@ -106,7 +106,8 @@
       if (a) location.href = a.href;
     } else if (e.key === "/") {
       const q = document.querySelector('input[name="q"]');
-      if (q) { e.preventDefault(); q.focus(); }
+      e.preventDefault();
+      if (q) q.focus(); else location.href = "/_/search";
     }
   });
 })();
