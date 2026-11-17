@@ -12,3 +12,6 @@
 .idea/
 .DS_Store
 Thumbs.db
+
+# deploy settings of a server
+/deploy/lodge.conf

@@ -238,7 +238,7 @@ Each phase ends in something usable, and at a gate where you decide whether to c
 Before going live:
 
 - [x] **Notifications**: done (`_config/notifications.json`, the old rules); turn on with `--notify` when the wiki goes live.
-- [ ] **Deployment**: VPS, Caddy for HTTPS, systemd service, `--push` to the private GitHub remote after each commit (deploy key or `gh auth setup-git`), restic for media.
+- [x] **Deployment**: `deploy/setup.sh` (see `deploy/README.md`); still to do: restic or the backup tool for media on the server.
 - [ ] **Media backup tool**: `lodge-wiki backup-media --from <server> --to <folder>` reading `_config/media.json`, copying missing or changed files (and the bin), then verifying hashes. Decide the transport (rsync/SFTP on the server's `_media`, or HTTP as an admin, which needs an admin-only way to fetch bin files).
 - [ ] **Security before going public**: CSRF tokens on forms; HTTP handler tests.
 

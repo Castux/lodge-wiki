@@ -1,0 +1,30 @@
+# Settings for deploy/setup.sh. Copy to deploy/lodge.conf (the script does
+# it on its first run), fill in, and run the script again. lodge.conf is
+# not committed.
+
+# Public address of the wiki. Caddy gets an HTTPS certificate for it
+# automatically; its DNS record must point at this server.
+# Leave empty to skip Caddy (the wiki then only listens on LISTEN).
+DOMAIN=wiki.example.org
+
+# The content repository. The server clones it over SSH with its own deploy
+# key (the script prints it), and pushes its commits back when PUSH=yes.
+# Leave empty to start a new, empty wiki.
+DATA_REPO=git@github.com:Castux/lodge-data.git
+
+# Where the content and runtime state live (lodge-data/, lodge-state/).
+BASE=/srv/lodge
+
+# Where the wiki listens; Caddy forwards to it. Keep it on 127.0.0.1.
+LISTEN=127.0.0.1:8080
+
+TITLE="The Chasers' Lodge"
+
+# Send the Discord notifications in _config/notifications.json (yes/no).
+NOTIFY=no
+
+# Push every change to DATA_REPO (yes/no): GitHub then always holds a copy.
+PUSH=yes
+
+# The system account the wiki runs as.
+SERVICE_USER=lodge

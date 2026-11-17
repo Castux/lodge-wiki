@@ -35,6 +35,7 @@ Everything that matters (pages, data, layouts, widgets, accounts in `_config/use
 | `--public` | off | allow reading without logging in |
 | `--as <user>` | off | development only: act as that user on every request |
 | `--notify` | off | send the notifications in `_config/notifications.json`; without it they are only logged |
+| `--push` | off | push the content repo to its upstream remote after changes (a backup) |
 
 Media files (images, sounds, pdfs) are in `../lodge-data/_media/`, which is git-ignored: copy them separately when moving the wiki.
 
@@ -61,6 +62,10 @@ const { pages, namespaces } = await wiki.list("ns");
 ```
 
 Every write is a git commit as the logged-in reader. A write based on an outdated `rev` fails with `err.conflict = true` instead of overwriting; reload and retry. Writes are limited to 30 a minute per user. `GET /_/log?since=YYYY-MM-DD` returns the commit history as JSON.
+
+## Deploying
+
+See [deploy/README.md](deploy/README.md): one script installs and updates everything on a Debian/Ubuntu server.
 
 ## Backups
 
