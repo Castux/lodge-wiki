@@ -51,12 +51,33 @@ func hashPassword(pw string) (string, error) {
 
 const minPassword = 8
 
+// clientIP is the visitor's address. Behind a reverse proxy on the same
+// machine (Caddy), it is the last address the proxy added to
+// X-Forwarded-For; that header is ignored from anywhere else, since
+// visitors could forge it.
 func clientIP(r *http.Request) string {
 	host, _, err := net.SplitHostPort(r.RemoteAddr)
 	if err != nil {
-		return r.RemoteAddr
+		host = r.RemoteAddr
+	}
+	if ip := net.ParseIP(host); ip != nil && ip.IsLoopback() {
+		if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
+			parts := strings.Split(xff, ",")
+			return strings.TrimSpace(parts[len(parts)-1])
+		}
 	}
 	return host
+}
+
+// isHTTPS reports whether the visitor reached the wiki over HTTPS
+// (directly, or through a local reverse proxy that says so).
+func isHTTPS(r *http.Request) bool {
+	if r.TLS != nil {
+		return true
+	}
+	host, _, _ := net.SplitHostPort(r.RemoteAddr)
+	ip := net.ParseIP(host)
+	return ip != nil && ip.IsLoopback() && r.Header.Get("X-Forwarded-Proto") == "https"
 }
 
 func (l *limiter) reset(key string) {
@@ -123,7 +144,7 @@ func (s *Server) accountSave(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// Other devices are logged out; this one gets a fresh session.
-	s.auth.Start(w, u)
+	s.auth.Start(w, r, u)
 	http.Redirect(w, r, "/_/account?saved=1", http.StatusSeeOther)
 }
 

@@ -18,6 +18,8 @@ import (
 type Git struct {
 	Dir string
 	mu  sync.Mutex
+
+	push chan struct{} // non-nil when commits are pushed (see StartPushing)
 }
 
 func (g *Git) run(stdin []byte, env []string, args ...string) ([]byte, error) {
@@ -251,6 +253,7 @@ func (g *Git) Write(file string, content []byte, base, author, message string) (
 	if _, err := g.run(nil, env, "commit", "-q", "-m", message, "--", file); err != nil {
 		return "", err
 	}
+	g.pushSoon()
 	return g.Head(file), nil
 }
 
@@ -345,5 +348,50 @@ func (g *Git) WriteMany(files map[string][]byte, author, message string) error {
 		"GIT_COMMITTER_NAME=lodge-wiki", "GIT_COMMITTER_EMAIL=wiki@lodge.invalid",
 	}
 	_, err := g.run(nil, env, append([]string{"commit", "-q", "-m", message, "--"}, paths...)...)
+	if err == nil {
+		g.pushSoon()
+	}
 	return err
+}
+
+// StartPushing makes every commit get pushed to the repository's
+// upstream remote, in the background: a few seconds after the last commit
+// (so a burst of edits is one push), and again every 10 minutes while a
+// push keeps failing (network down, remote unreachable). Pushes never
+// block or fail an edit.
+func (g *Git) StartPushing(logf func(string, ...any)) {
+	g.push = make(chan struct{}, 1)
+	go func() {
+		pending := true // push anything left from before a restart
+		for {
+			wait := 10 * time.Minute
+			if pending {
+				wait = 5 * time.Second
+			}
+			select {
+			case <-g.push:
+				pending = true
+				continue // restart the delay: wait for the burst to end
+			case <-time.After(wait):
+			}
+			if !pending {
+				continue
+			}
+			if out, err := g.run(nil, nil, "push", "--quiet"); err != nil {
+				logf("git push failed (will retry): %v %s", err, strings.TrimSpace(string(out)))
+				continue
+			}
+			pending = false
+		}
+	}()
+}
+
+func (g *Git) pushSoon() {
+	if g.push == nil {
+		return
+	}
+	select {
+	case g.push <- struct{}{}:
+	default:
+	}
 }

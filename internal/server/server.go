@@ -25,6 +25,7 @@ type Config struct {
 	Public  bool   // allow reading without logging in
 	DevUser string // development only: act as this account on every request
 	Notify  bool   // send notifications (otherwise they are only logged)
+	Push    bool   // push the content repo to its remote after commits
 }
 
 // Server serves one wiki.
@@ -47,6 +48,9 @@ func New(cfg Config) (*Server, error) {
 	}
 	if err := os.MkdirAll(cfg.State, 0o755); err != nil {
 		return nil, err
+	}
+	if cfg.Push {
+		store.Git.StartPushing(log.Printf)
 	}
 	auth, err := NewAuth(cfg.State, store.Git)
 	if err != nil {

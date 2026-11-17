@@ -184,12 +184,13 @@ func (a *Auth) sign(s string) string {
 	return base64.RawURLEncoding.EncodeToString(m.Sum(nil))
 }
 
-// Start sets a session cookie.
-func (a *Auth) Start(w http.ResponseWriter, u *User) {
+// Start sets a session cookie (HTTPS-only when the site is served over
+// HTTPS).
+func (a *Auth) Start(w http.ResponseWriter, r *http.Request, u *User) {
 	exp := time.Now().Add(sessionLife).Unix()
 	val := url.QueryEscape(u.Name) + "|" + strconv.FormatInt(exp, 10)
 	http.SetCookie(w, &http.Cookie{Name: cookieName, Value: val + "|" + a.sign(val), Path: "/",
-		HttpOnly: true, SameSite: http.SameSiteLaxMode, Expires: time.Unix(exp, 0)})
+		HttpOnly: true, Secure: isHTTPS(r), SameSite: http.SameSiteLaxMode, Expires: time.Unix(exp, 0)})
 }
 
 // End clears the session cookie.
@@ -259,7 +260,7 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.loginLimit.reset(ip)
-	s.auth.Start(w, u)
+	s.auth.Start(w, r, u)
 	http.Redirect(w, r, next, http.StatusSeeOther)
 }
 

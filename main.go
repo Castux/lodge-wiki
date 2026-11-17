@@ -27,6 +27,7 @@ func main() {
 	public := flag.Bool("public", false, "allow reading without logging in")
 	devAs := flag.String("as", "", "DEVELOPMENT ONLY: treat every request as this logged-in account")
 	notify := flag.Bool("notify", false, "send the notifications in _config/notifications.json (otherwise they are only logged)")
+	push := flag.Bool("push", false, "push the content repo to its upstream remote after changes (a backup)")
 	setPassword := flag.String("set-password", "", "create or update this admin account (password read from stdin) and exit")
 	flag.Parse()
 
@@ -62,7 +63,7 @@ func main() {
 	}
 
 	start := time.Now()
-	srv, err := server.New(server.Config{Root: *root, State: *state, Title: *title, Public: *public, DevUser: *devAs, Notify: *notify})
+	srv, err := server.New(server.Config{Root: *root, State: *state, Title: *title, Public: *public, DevUser: *devAs, Notify: *notify, Push: *push})
 	if err != nil {
 		log.Fatal(err)
 	}
