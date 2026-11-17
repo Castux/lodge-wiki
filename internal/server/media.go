@@ -270,7 +270,9 @@ func (s *Server) mediaUpload(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	replaced := false
 	if _, err := os.Stat(full); err == nil {
+		replaced = true
 		old := s.trashPath(path.Join(ns, name))
 		if err := os.MkdirAll(filepath.Dir(old), 0o755); err == nil {
 			if err := os.Rename(full, old); err == nil {
@@ -295,6 +297,11 @@ func (s *Server) mediaUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	log.Printf("upload %s by %s (%d bytes)", rel, s.user(r), hdr.Size)
+	verb := "upload "
+	if replaced {
+		verb = "replace "
+	}
+	s.mediaChanged(s.user(r), "media: "+verb+path.Join(ns, name))
 	if back := r.FormValue("back"); strings.HasPrefix(back, "/_/files") {
 		http.Redirect(w, r, back+"&saved="+url.QueryEscape(name+" uploaded"), http.StatusSeeOther)
 		return

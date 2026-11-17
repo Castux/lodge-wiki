@@ -67,3 +67,9 @@ const { pages, namespaces } = await wiki.list("ns");
 ```
 
 Every write is a git commit as the logged-in reader. A write based on an outdated `rev` fails with `err.conflict = true` instead of overwriting; reload and retry. Writes are limited to 30 a minute per user. `GET /_/log?since=YYYY-MM-DD` returns the commit history as JSON.
+
+## Backups
+
+- **Pages, data, layouts, widgets, accounts:** the content repo. Push it to a private remote (and pull it elsewhere); every change is a commit.
+- **Media:** `_media/` is not in git. `_config/media.json` (committed with every media change) lists each file under `files` (paths under `_media/`) and `trash` (paths under `_media/.trash/`) with its `size`, `sha256` and `modified` time. A backup tool pulls the content repo, then copies every listed file whose hash it doesn't already have, from the server's `_media/` folder (rsync/SFTP) or over HTTP as an admin (`/_media/<path>`; bin files are only reachable on disk). Checking the hashes afterwards proves the copy is complete.
+- **State folder:** nothing to back up.

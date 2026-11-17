@@ -121,6 +121,8 @@ func (s *Server) finish(p *movePlan, author, msg string) error {
 	}
 
 	if p.mediaOld != "" {
+		manifestMu.Lock()
+		defer manifestMu.Unlock()
 		from, to := s.store.File("_media/"+p.mediaOld), s.store.File("_media/"+p.mediaNew)
 		if err := os.MkdirAll(filepath.Dir(to), 0o755); err != nil {
 			return err
@@ -129,6 +131,9 @@ func (s *Server) finish(p *movePlan, author, msg string) error {
 			return err
 		}
 		log.Printf("media moved: %s -> %s by %s", p.mediaOld, p.mediaNew, author)
+		if nu, err := s.manifestUpdate(); err == nil && nu != nil {
+			p.files[MediaManifestFile] = nu
+		}
 		if len(p.files) > 0 {
 			if err := s.store.Git.WriteMany(p.files, author, msg); err != nil {
 				os.Rename(to, from) // undo, so pages and files stay in step
@@ -397,6 +402,7 @@ func (s *Server) mediaRemove(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	log.Printf("media deleted (moved to %s) by %s", dst, s.user(r))
+	s.mediaChanged(s.user(r), "media: delete "+m+" (kept in the bin)")
 	http.Redirect(w, r, "/_/files?dir="+url.QueryEscape(path.Dir("_media/"+m))+"&saved="+url.QueryEscape(path.Base(m)+" moved to the bin"), http.StatusSeeOther)
 }
 
