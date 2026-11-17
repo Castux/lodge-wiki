@@ -1,0 +1,2 @@
+*.sh text eol=lf
+deploy/lodge.conf.example text eol=lf

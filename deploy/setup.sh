@@ -10,6 +10,8 @@
 # data changes pushed from elsewhere, rewrites the service and web server
 # configuration, restarts the wiki and checks that it answers.
 set -euo pipefail
+# (With pipefail, never write "cmd | grep -q": grep -q stops reading early,
+# cmd gets a broken pipe and the test fails. Capture the output first.)
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO="$(cd "$HERE/.." && pwd)"
@@ -34,7 +36,9 @@ if [ ! -f "$CONF" ]; then
 fi
 # shellcheck source=lodge.conf.example
 . "$CONF"
-: "${BASE:=/srv/lodge}" "${LISTEN:=127.0.0.1:8080}" "${SERVICE_USER:=lodge}" "${TITLE:=The Chasers' Lodge}"
+: "${BASE:=/srv/lodge}" "${LISTEN:=127.0.0.1:8080}" "${SERVICE_USER:=lodge}"
+# (not ${TITLE:=...}: bash would read the apostrophe as an opening quote)
+[ -n "${TITLE:-}" ] || TITLE="The Chasers' Lodge"
 : "${NOTIFY:=no}" "${PUSH:=yes}" "${DOMAIN:=}" "${DATA_REPO:=}"
 DATA="$BASE/lodge-data"
 STATE="$BASE/lodge-state"
@@ -129,9 +133,10 @@ if [ ! -d "$DATA/.git" ]; then
     printf '/_media/\n' | as_svc tee "$DATA/.gitignore" >/dev/null
     as_svc git -C "$DATA" add -A && as_svc git -C "$DATA" commit -qm "New wiki"
     note "no DATA_REPO: started an empty wiki in $DATA"
-  elif ! as_svc git ls-remote -q "$DATA_REPO" >/dev/null 2>&1; then
-    warn "The server cannot read $DATA_REPO yet."
-    note "Add this key to the repository as a deploy key, with write access"
+  elif ! LSREMOTE="$(as_svc git ls-remote -q "$DATA_REPO" 2>&1 >/dev/null)"; then
+    warn "The server cannot read $DATA_REPO yet. Git says:"
+    printf '%s\n' "$LSREMOTE" | head -n 4 | sed 's/^/     /'
+    note "If it is a GitHub repository, add this key to it as a deploy key, with write access"
     note "(GitHub: repository > Settings > Deploy keys > Add deploy key):"
     echo; cat "$KEY.pub"; echo
     note "Then run this script again."
@@ -163,7 +168,8 @@ fi
 
 # Media is not in git: check it is there.
 MEDIA_LISTED="$(grep -c '"sha256"' "$DATA/_config/media.json" 2>/dev/null || true)"; MEDIA_LISTED="${MEDIA_LISTED:-0}"
-MEDIA_HERE="$(find "$DATA/_media" -type f -not -path '*/.trash/*' 2>/dev/null | wc -l)"
+MEDIA_HERE=0
+[ -d "$DATA/_media" ] && MEDIA_HERE="$(find "$DATA/_media" -type f -not -path '*/.trash/*' | wc -l)"
 if [ "$MEDIA_HERE" -eq 0 ] && [ "$MEDIA_LISTED" -gt 0 ]; then
   warn "No media yet ($MEDIA_LISTED files listed in _config/media.json). Copy it from your computer:"
   note "rsync -av --progress lodge-data/_media/ $(hostname -f 2>/dev/null || hostname):$DATA/_media/"
@@ -179,7 +185,14 @@ say "Service"
 FLAGS=(--root "$DATA" --state "$STATE" --addr "$LISTEN" --title "$TITLE")
 [ "$NOTIFY" = yes ] && FLAGS+=(--notify)
 [ "$PUSH" = yes ] && [ -n "$(as_svc git -C "$DATA" remote)" ] && FLAGS+=(--push)
-EXEC="$BIN"; for f in "${FLAGS[@]}"; do EXEC+=" $(printf '%q' "$f")"; done
+# Quote one argument for systemd's ExecStart: double quotes, with \ " escaped
+# and systemd's own % and $ doubled.
+sd_quote() {
+  local s="$1"
+  s="${s//\\/\\\\}"; s="${s//\"/\\\"}"; s="${s//%/%%}"; s="${s//\$/\$\$}"
+  printf '"%s"' "$s"
+}
+EXEC="$BIN"; for f in "${FLAGS[@]}"; do EXEC+=" $(sd_quote "$f")"; done
 NEW_UNIT="$(cat <<EOF
 # Written by lodge-wiki/deploy/setup.sh: edit deploy/lodge.conf and rerun instead.
 [Unit]
@@ -211,13 +224,23 @@ if [ "$(cat "$UNIT" 2>/dev/null)" != "$NEW_UNIT" ]; then
 fi
 # Another service may already use the port (several services on one machine).
 PORT="${LISTEN##*:}"
-if ss -ltnpH "sport = :$PORT" 2>/dev/null | grep -v '"lodge-wiki"' | grep -q .; then
-  ss -ltnpH "sport = :$PORT" | grep -v '"lodge-wiki"'
+OTHER="$(ss -ltnpH "sport = :$PORT" 2>/dev/null | grep -v '"lodge-wiki"' || true)"
+if [ -n "$OTHER" ]; then
+  printf '%s\n' "$OTHER"
   die "port $PORT is already used by another program (above): choose another LISTEN in $CONF"
 fi
 systemctl enable -q lodge-wiki
 systemctl restart lodge-wiki
-note "restarted (flags: ${FLAGS[*]:6})"
+EXTRA="${FLAGS[*]:8}"
+note "restarted${EXTRA:+ with $EXTRA}"
+for i in $(seq 1 30); do
+  if curl -fs -o /dev/null "http://$LISTEN/_/login"; then
+    note "the wiki answers on http://$LISTEN"
+    break
+  fi
+  sleep 1
+  [ "$i" -eq 30 ] && { journalctl -u lodge-wiki -n 30 --no-pager; die "the wiki did not start (log above)"; }
+done
 
 # ---------- web server ----------
 #
@@ -278,33 +301,28 @@ EOF
     fi
     if systemctl is-active -q caddy; then
       systemctl reload caddy && note "reloaded Caddy"
-    elif systemctl list-unit-files caddy.service >/dev/null 2>&1 && systemctl list-unit-files caddy.service | grep -q caddy; then
+    elif systemctl cat caddy.service >/dev/null 2>&1; then
       systemctl enable -q --now caddy && note "started Caddy"
     else
       warn "Caddy is not run by systemd here: make it import $SITE, then reload it yourself"
     fi
   else
     note "configuration unchanged"
+    if ! systemctl is-active -q caddy && systemctl cat caddy.service >/dev/null 2>&1; then
+      systemctl enable -q --now caddy && note "started Caddy"
+    fi
   fi
   rm -rf "$BACKUP"
 
-  if command -v ufw >/dev/null && ufw status | grep -q 'Status: active'; then
+  if command -v ufw >/dev/null && [ "$(ufw status 2>/dev/null | head -n 1)" = "Status: active" ]; then
     ufw allow 80/tcp >/dev/null && ufw allow 443/tcp >/dev/null && note "firewall: 80 and 443 open"
   fi
 fi
 
-# ---------- check ----------
+# ---------- summary ----------
 
-say "Check"
-for i in $(seq 1 30); do
-  if curl -fsS -o /dev/null "http://$LISTEN/_/login"; then
-    note "the wiki answers on http://$LISTEN"
-    break
-  fi
-  sleep 1
-  [ "$i" -eq 30 ] && { journalctl -u lodge-wiki -n 30 --no-pager; die "the wiki did not start (log above)"; }
-done
-if journalctl -u lodge-wiki --since "2 min ago" --no-pager 2>/dev/null | grep -q "Created account"; then
+say "Summary"
+if [ "$(journalctl -u lodge-wiki --since "2 min ago" --no-pager 2>/dev/null | grep -c "Created account" || true)" -gt 0 ]; then
   warn "New wiki: an admin account was created. Its password is in: journalctl -u lodge-wiki | grep 'Created account'"
 fi
 [ -n "$DOMAIN" ] && note "open https://$DOMAIN"
