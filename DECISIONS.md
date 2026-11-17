@@ -12,11 +12,11 @@ Calls made while building, with the reason. Newest at the bottom of each section
 ## Content format
 
 - **Pages are CommonMark + GFM** (tables, strikethrough, autolinks) with footnotes and raw HTML allowed. Optional YAML frontmatter.
-- **Wiki-links and media embeds keep the DokuWiki-style `[[...]]` and `{{...}}` syntax**, with `/` instead of `:` as the namespace separator. Reason: about 2,900 links and 5,950 embeds, users already know the syntax, and `{{...}}` carries size and alignment that plain markdown images cannot. Standard markdown links and images also work. See `docs/syntax.md`.
-- **Page ids are normalised the DokuWiki way** (lowercase, accents stripped, punctuation and spaces to `-`), in core. So `[[Fool's Landing]]` keeps working without the converter rewriting it.
-- **A link without a label shows the target page's title** (its first heading), as DokuWiki did with `useheading`.
-- **Containers use `::: classes` fences** and render `<div class="classes">`. The old `<WRAP spoiler>` becomes `::: spoiler`; inline `<wrap badaawi>` becomes `<span class="badaawi">`. CSS selectors are renamed from `.wrap_x` to `.x`.
-- **Leaf directives are lines starting with `::name`**, e.g. `::list skarnholm/notice sort=created pictures` and `::widget map`.
+- **Links and images are standard markdown**, using the page's URL path (`[Label](/ns/page)`, `![alt](/_media/ns/img.jpg)`). Old `[[link]]`s without a label get the target page's title at conversion. Reason: plain markdown everywhere, and a URL copied from the address bar is a valid link.
+- **Sized or aligned images use an HTML `<img>` tag** (`width`, `align`); the server scales images to the requested width.
+- **Page ids are normalised the DokuWiki way** (lowercase, accents stripped, punctuation and spaces to `-`), so old ids map onto new paths predictably.
+- **Boxes and styled text are HTML with a class** (`<div class="spoiler">`, `<span class="badaawi">`), replacing the wrap plugin. CSS selectors are renamed from `.wrap_x` to `.x`.
+- **The only additions to markdown are frontmatter and fenced code blocks with the `list` and `widget` languages** (YAML bodies). They show as code in other viewers. No `:::` containers, no `::` directives, no wiki-link syntax.
 - **Complex tables (colspan, rowspan, header cells in body rows, no header row) become HTML tables**; simple ones become GFM tables.
 - **Smileys become emoji; DokuWiki typography entities (`->`, `(c)`, `...`) become the Unicode characters** at conversion time, so the renderer does no text substitution.
 - **`~~NOTOC~~` becomes frontmatter `toc: false`**; `~~NOCACHE~~` is dropped.

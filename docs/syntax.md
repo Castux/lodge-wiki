@@ -1,102 +1,93 @@
 # Page syntax
 
-Pages are markdown files (`.md`) in the content repo. The path is the page id: `foolslanding/notice/missingpet.md` is the page `foolslanding/notice/missingpet`, served at `/foolslanding/notice/missingpet`. `start` is the namespace's front page: `/foolslanding/` shows `foolslanding/start.md`.
+Pages are plain markdown: CommonMark plus GitHub Flavored Markdown (tables, strikethrough, autolinks, footnotes). Raw HTML is allowed and used where markdown has no syntax. The wiki adds only two things: optional frontmatter, and fenced code blocks with the `list` or `widget` language.
 
-Base syntax is CommonMark plus GFM tables, strikethrough (`~~x~~`), autolinked URLs and footnotes (`[^1]`). Raw HTML is allowed. The wiki adds the following.
+A page file `foolslanding/notice/missingpet.md` is the page `foolslanding/notice/missingpet`, served at `/foolslanding/notice/missingpet`. `start` is a namespace's front page: `/foolslanding/` shows `foolslanding/start.md`.
+
+## Links
+
+Standard markdown links. Internal links use the page's URL path, so a link can be pasted straight from the browser's address bar:
+
+```markdown
+[Missing pet](/foolslanding/notice/missingpet)
+[Siege, day two](/foolslanding/story/siege#day-two)
+[Rules](/rules/)
+[Elsewhere](https://example.com)
+```
+
+Relative paths (`missingpet`, `../story/siege`) also work. Links to pages that do not exist are shown in a different colour.
+
+Page ids are lowercase, with `-` for spaces and punctuation, and accents removed (`Fool's Landing` → `fool-s-landing`).
+
+## Images and media
+
+Standard markdown images; media files are served under `/_media/`:
+
+```markdown
+![Map of the coast](/_media/foolslanding/map.jpg)
+```
+
+When size or alignment is needed, use an HTML `<img>` tag:
+
+```html
+<img src="/_media/foolslanding/map.jpg" width="200" align="right" alt="Map">
+```
+
+The server scales images down to the requested `width` (or `height`), so large files are not sent in full. Clicking an image opens the full-size file. Other media files (pdf, mp3) are ordinary links, or `<audio controls src="…">`.
+
+## Boxes and styled text
+
+Use HTML with a class. Leave blank lines around the markdown inside, as CommonMark requires:
+
+```html
+<div class="spoiler">
+
+Hidden text, **with markdown**.
+
+</div>
+
+The sign reads <span class="badaawi">Welcome</span>.
+```
+
+The classes available come from the namespace's layout CSS (`spoiler`, `noticeboard`, `wood1`, `statusboard`, `badaawi`, ...).
 
 ## Frontmatter (optional)
 
 ```yaml
 ---
-title: Override title      # default: the first heading of the page
-toc: false                # default: a table of contents is shown when the page has 3+ headings
+title: Override title     # default: the page's first heading
+toc: false                # default: table of contents when the page has 3+ headings
 ---
 ```
 
-Unknown keys are kept and exposed to listings and widgets.
+## Page listings
 
-## Page ids
+A fenced code block with the language `list`. Its body is YAML:
 
-Ids are normalised before lookup, so links can be written naturally:
-
-- lowercase; accents removed (`é` → `e`)
-- `:` and `;` become `/` (the namespace separator), so old `ns:page` ids still resolve
-- any character other than letters, digits, `.`, `_`, `-` and `/` becomes `-`; runs of `-` collapse to one
-- each segment is trimmed of leading and trailing `.`, `_`, `-`
-
-`[[Fool's Landing]]` therefore links to `fool-s-landing`.
-
-## Wiki-links
-
+````markdown
+```list
+ns: skarnholm/notice      # default: the current namespace
+exclude: [start]          # page names to leave out; "self" = the current page
+sort: created             # title (default), id, created, modified
+reverse: true
+columns: 2                # default 3
+numbered: true
+pictures: true            # grid of each page's first image instead of a list
+recursive: true           # include pages in sub-namespaces
+namespaces: true          # also list sub-namespaces
+tree: true                # nested tree of sub-namespaces and pages
+heading: Pages            # heading shown above the list (default: none)
 ```
-[[target]]
-[[target|label]]
-[[target#section|label]]
-[[#section]]
-[[target|{{image.jpg?100}}]]
-[[https://example.com|label]]
+````
+
+## Widgets
+
+A fenced code block with the language `widget`. The first word is the widget name (from `_widgets/<name>/`); the rest of the body is passed to the widget as YAML:
+
+````markdown
+```widget map
+data: skarnholm/map.json
 ```
+````
 
-Resolving `target` against the current page's namespace (`ns`):
-
-| Form | Resolves to |
-| --- | --- |
-| `page` (no `/`) | `ns/page` |
-| `a/b` (contains `/`, no leading `.`) | `a/b`, absolute |
-| `/a/b` | `a/b`, absolute |
-| `./page`, `../page` | relative to `ns` |
-| `a/b/` (trailing `/`) | `a/b/start`, absolute (so `a/` is `a/start`) |
-| empty with `#section` | same page |
-
-With no label, the link shows the target page's title, or the target text if the page does not exist. Links to missing pages get the class `wikilink2`; existing ones `wikilink1`.
-
-## Media embeds
-
-```
-{{path}}            {{path|caption}}
-{{path?200}}        {{path?200x100}}     {{path?x100}}
-{{path?nolink}}     {{path?direct}}      {{path?linkonly}}
-{{ path}}  right    {{path }}  left      {{ path }}  centre
-```
-
-`path` resolves like a wiki-link (bare name = current namespace) inside the media folder. Parameters combine with `&` (`{{a.jpg?200&nolink}}`). Default behaviour: the image links to the full-size file. Non-image files (pdf, mp3, wav) render as a download link; audio files render as an audio player. A media `path` may also be an external URL.
-
-## Containers
-
-```
-::: spoiler
-Hidden text, **markdown** inside.
-:::
-```
-
-Renders `<div class="spoiler">…</div>`; several classes are allowed (`::: noticeboard wood1`). Containers can nest; an inner fence may use more colons (`::::`).
-
-## Directives
-
-A line starting with `::` followed by a name. Arguments are a list of words and `key=value` pairs (values may be quoted).
-
-### `::list [namespace] [options]`
-
-Lists the pages in a namespace (default: the current one).
-
-| Option | Meaning |
-| --- | --- |
-| `exclude` | leave out the current page |
-| `exclude=a,b` | leave out these page names |
-| `cols=N` | number of columns (default 3) |
-| `numbered` | numbered list instead of bullets |
-| `sort=title` (default), `sort=id`, `sort=created`, `sort=modified` | order; `natural` sorts numbers by value |
-| `reverse` | reverse the order |
-| `pictures` | a grid of each page's first image, linking to the page |
-| `recursive` | include pages in sub-namespaces |
-| `namespaces` | also list sub-namespaces (linking to their start pages) |
-| `tree` | nested tree of sub-namespaces and pages |
-| `heading="…"` | heading shown above the pages (default none) |
-
-### `::widget name [args]`
-
-Embeds the widget from `_widgets/name/` (`widget.js`, optional `widget.css`).
-
-### `::toc`
-
-Forces the table of contents on, at that position.
+In any other markdown viewer, `list` and `widget` blocks simply show as code.
