@@ -136,6 +136,7 @@ func (s *Server) revert(w http.ResponseWriter, r *http.Request) {
 	if len(short) > 8 {
 		short = short[:8]
 	}
+	before := s.store.Index().Pages[id]
 	if _, err := s.store.Git.Write(fileOf(id), raw, "-", s.user(r), "revert "+id+" to "+short); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -145,7 +146,19 @@ func (s *Server) revert(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.store.UpdateIndex(id, s.user(r), time.Now())
+	s.pageChanged(r, "revert", id, "revert to "+short, before)
 	http.Redirect(w, r, wiki.PageURL(id), http.StatusSeeOther)
+}
+
+// changeType names a page change for notifications.
+func changeType(existed, exists bool) string {
+	switch {
+	case !exists:
+		return "delete"
+	case !existed:
+		return "create"
+	}
+	return "edit"
 }
 
 func (s *Server) backlinks(w http.ResponseWriter, r *http.Request) {
@@ -381,6 +394,8 @@ func (s *Server) rawPut(w http.ResponseWriter, r *http.Request) {
 	if wd := r.Header.Get("X-Widget"); wd != "" {
 		msg += " (via widget " + wd + ")"
 	}
+	pageID := strings.TrimSuffix(p, ".md")
+	before := s.store.Index().Pages[pageID]
 	rev, err := s.store.Git.Write(p, body, base, s.user(r), msg)
 	var conflict *wiki.ErrConflict
 	if errors.As(err, &conflict) {
@@ -393,7 +408,8 @@ func (s *Server) rawPut(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if path.Ext(p) == ".md" {
-		s.store.UpdateIndex(strings.TrimSuffix(p, ".md"), s.user(r), time.Now())
+		s.store.UpdateIndex(pageID, s.user(r), time.Now())
+		s.pageChanged(r, changeType(before != nil, true), pageID, r.Header.Get("X-Summary"), before)
 	}
 	w.Header().Set("X-Revision", rev)
 	w.WriteHeader(http.StatusNoContent)

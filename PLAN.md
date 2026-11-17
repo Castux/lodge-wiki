@@ -237,7 +237,7 @@ Each phase ends in something usable, and at a gate where you decide whether to c
 
 Before going live:
 
-- [ ] **Notifications**: declarative webhook rules in `_config/` (events, namespaces, message template, as the old lodgenotifier), sent by the core after each commit. Discord first.
+- [x] **Notifications**: done (`_config/notifications.json`, the old rules); turn on with `--notify` when the wiki goes live.
 - [ ] **Deployment**: VPS, Caddy for HTTPS, systemd service, `--push` to the private GitHub remote after each commit (deploy key or `gh auth setup-git`), restic for media.
 - [ ] **Media backup tool**: `lodge-wiki backup-media --from <server> --to <folder>` reading `_config/media.json`, copying missing or changed files (and the bin), then verifying hashes. Decide the transport (rsync/SFTP on the server's `_media`, or HTTP as an admin, which needs an admin-only way to fetch bin files).
 - [ ] **Security before going public**: CSRF tokens on forms; HTTP handler tests.

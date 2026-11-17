@@ -34,6 +34,7 @@ Everything that matters (pages, data, layouts, widgets, accounts in `_config/use
 | `--title` | `The Chasers' Lodge` | site title |
 | `--public` | off | allow reading without logging in |
 | `--as <user>` | off | development only: act as that user on every request |
+| `--notify` | off | send the notifications in `_config/notifications.json`; without it they are only logged |
 
 Media files (images, sounds, pdfs) are in `../lodge-data/_media/`, which is git-ignored: copy them separately when moving the wiki.
 

@@ -222,6 +222,7 @@ func (s *Server) save(w http.ResponseWriter, r *http.Request) {
 			msg = "edit " + strings.TrimSuffix(file, ".md")
 		}
 	}
+	before := s.store.Index().Pages[id]
 	_, err := s.store.Git.Write(file, content, r.FormValue("base"), s.user(r), msg)
 	var conflict *wiki.ErrConflict
 	if errors.As(err, &conflict) {
@@ -243,6 +244,7 @@ func (s *Server) save(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.store.UpdateIndex(id, s.user(r), time.Now())
+	s.pageChanged(r, changeType(before != nil, content != nil), id, summary, before)
 	http.Redirect(w, r, wiki.PageURL(id), http.StatusSeeOther)
 }
 

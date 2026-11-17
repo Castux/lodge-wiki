@@ -24,6 +24,7 @@ type Config struct {
 	Title   string
 	Public  bool   // allow reading without logging in
 	DevUser string // development only: act as this account on every request
+	Notify  bool   // send notifications (otherwise they are only logged)
 }
 
 // Server serves one wiki.
