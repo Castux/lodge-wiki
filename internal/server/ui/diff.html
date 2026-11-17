@@ -6,6 +6,5 @@
   <input type="hidden" name="rev" value="{{.Rev.Hash}}"><button type="submit" class="lw-link">restore this version</button>
 </form>{{end}}</p>
 {{if not .Lines}}<p>No changes to the text in this edit.</p>{{else}}
-<pre class="lw-diff">{{range .Lines}}<span class="lw-{{.Kind}}">{{.Text}}</span>
-{{end}}</pre>{{end}}
+<pre class="lw-diff">{{range .Lines}}<span class="lw-{{.Kind}}">{{.Text}}</span>{{end}}</pre>{{end}}
 </div>

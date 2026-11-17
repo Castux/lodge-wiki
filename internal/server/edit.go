@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"regexp"
 	"sort"
 	"strings"
 	"time"
@@ -125,6 +126,9 @@ func (s *Server) history(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	for i := range revs {
+		revs[i].Message = tidySummary(revs[i].Message)
+	}
 	s.show(w, r, &View{ID: id, Title: "History of " + s.titleOr(id), Mode: "history", Exists: s.store.Exists(id),
 		Content: s.ui_("history.html", map[string]any{"ID": id, "URL": wiki.PageURL(id), "Path": strings.TrimPrefix(wiki.PageURL(id), "/"), "Revs": revs, "CanEdit": s.can(r, RoleEditor)})})
 }
@@ -241,6 +245,7 @@ func (s *Server) recent(w http.ResponseWriter, r *http.Request) {
 	}
 	var changes []Change
 	for i, rv := range revs {
+		rv.Message = tidySummary(rv.Message)
 		c := Change{Revision: rv}
 		for _, f := range files[i] {
 			c.Pages = append(c.Pages, strings.TrimSuffix(f, ".md"))
@@ -496,4 +501,16 @@ func (s *Server) logJSON(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(commits)
+}
+
+var idPrefixRe = regexp.MustCompile(`^[a-z0-9_.:/-]+: `)
+
+// tidySummary drops the "page/id: " prefix the migrated history carries
+// in every message, and DokuWiki's "edited" placeholder.
+func tidySummary(msg string) string {
+	msg = idPrefixRe.ReplaceAllString(msg, "")
+	if msg == "edited" || msg == "external edit" {
+		return ""
+	}
+	return msg
 }
