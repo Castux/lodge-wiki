@@ -239,5 +239,4 @@ Each phase ends in something usable, and at a gate where you decide whether to c
 - [ ] **Media backup tool**: `lodge-wiki backup-media --from <server> --to <folder>` reading `_config/media.json`, copying missing or changed files (and the bin), then verifying hashes. Decide the transport (rsync/SFTP on the server's `_media`, or HTTP as an admin, which needs an admin-only way to fetch bin files).
 - [ ] **Deployment**: VPS, Caddy for HTTPS, systemd service, `--push` to the private GitHub remote after each commit (deploy key or `gh auth setup-git`), restic for media.
 - [ ] **Discord login**: needs a Discord application (client id, secret) and the public address for the redirect.
-- [ ] **Visual side-by-side check against the old wiki** (needs PHP in WSL).
 - [ ] Smaller: empty-the-bin for admins; image size/alignment from the editor's picker; uploads in recent changes as media entries; HTTP handler tests; CSRF tokens before going public.

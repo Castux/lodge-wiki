@@ -73,3 +73,4 @@ Calls made while building, with the reason. Newest at the bottom of each section
 - **The start-up manifest sync never records a mass removal** (more than 20 files and over half the list missing): it logs a warning instead, so a missing or half-copied media folder on a fresh server cannot make a backup tool believe everything was deleted.
 - **Everyone can edit their real name and email on `/_/account`** (only admins see them); the account and users pages are in the menu's User Tools.
 - **Files the server writes itself are marked in Files.** `_config/media.json` is read-only ("view"; the editor has no Save button and the server refuses saves). `_config/users.json` is editable with a warning, for repairs; a save must keep a bcrypt hash and a valid role for every account, and the accounts are reloaded right after.
+- **No side-by-side comparison with the running old wiki**: the user reviewed the result and judged the look correct (2026-11-18).
