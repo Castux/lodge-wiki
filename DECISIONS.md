@@ -31,3 +31,14 @@ Calls made while building, with the reason. Newest at the bottom of each section
 ## Server
 
 - **The index (titles, backlinks, listings, created/modified dates, search) is in memory**, rebuilt at start-up from the files plus a single `git log` pass. SQLite from the plan is not needed at 1,230 pages. Revisit if start-up gets slow.
+
+## Migration (from the migration script's run)
+
+- **Page history: one commit per DokuWiki change**, with the original author (`user@lodge.invalid`, "anonymous" when empty), date, and `<page id>: <summary>` as message. 11,775 commits.
+- **Revisions with no attic copy** (external edits, attic files renamed by the move plugin) are recovered in order from: the same revision under a later id of the page, the move source's last text, the nearest later revision, the current text. 432 of 13,537 changes had nothing recoverable and were skipped.
+- **Section anchors are lowercase with `-`** (`#Attack_Rolls` → `#attack-rolls`), matching the renderer's heading ids.
+- **`?nolink` and `?direct` image options are dropped**; centre alignment is written as `align="center"` and turned into the `mediacenter` class by the renderer.
+- **Bare URLs become `<https://…>` autolinks.** Straight quotes are not turned into curly ones (DokuWiki did that at render time).
+- **`list` blocks have three extra keys** beyond the spec, from nspages options: `natural: true`, `label: "{title} ({user})"`, `dates: true`. `-simplelist` becomes `columns: 1`. Without `-textPages` the heading is "Pages in this namespace:", nspages' default.
+- **Raw HTML blocks lose their inner blank lines** (except in `<pre>`), so CommonMark keeps each as one HTML block; an HTML-only first line of a paragraph (usually an aligned `<img>`) is split into its own block.
+- **Broken DokuWiki source stays broken** (e.g. a link split over two lines); indented lines DokuWiki showed as code stay code.
