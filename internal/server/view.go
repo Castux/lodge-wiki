@@ -235,6 +235,9 @@ func (s *Server) tools(v *View) []Tool {
 	}
 	if v.Exists || v.Mode == "history" {
 		t = append(t, Tool{Name: "history", Label: "History", URL: "/_/history/" + pagePath, Active: v.Mode == "history"})
+		if v.CanEdit && v.Exists {
+			t = append(t, Tool{Name: "move", Label: "Rename", URL: "/_/move/" + pagePath, Active: v.Mode == "move"})
+		}
 		t = append(t, Tool{Name: "backlinks", Label: fmt.Sprintf("Backlinks (%d)", v.Backlinks), URL: "/_/backlinks/" + pagePath, Active: v.Mode == "backlinks"})
 	}
 	t = append(t,

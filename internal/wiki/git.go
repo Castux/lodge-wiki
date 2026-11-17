@@ -276,3 +276,36 @@ func (g *Git) LogAll(since time.Time) ([]Commit, error) {
 	}
 	return res, nil
 }
+
+// WriteMany writes and deletes (nil content) several files in one commit,
+// under the write lock.
+func (g *Git) WriteMany(files map[string][]byte, author, message string) error {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	var paths []string
+	for file, content := range files {
+		abs := g.Dir + string(os.PathSeparator) + strings.ReplaceAll(file, "/", string(os.PathSeparator))
+		if content == nil {
+			if err := os.Remove(abs); err != nil && !os.IsNotExist(err) {
+				return err
+			}
+		} else {
+			if err := os.MkdirAll(dirOf(abs), 0o755); err != nil {
+				return err
+			}
+			if err := os.WriteFile(abs, content, 0o644); err != nil {
+				return err
+			}
+		}
+		paths = append(paths, file)
+	}
+	if _, err := g.run(nil, nil, append([]string{"add", "-A", "--"}, paths...)...); err != nil {
+		return err
+	}
+	env := []string{
+		"GIT_AUTHOR_NAME=" + author, "GIT_AUTHOR_EMAIL=" + author + "@lodge.invalid",
+		"GIT_COMMITTER_NAME=lodge-wiki", "GIT_COMMITTER_EMAIL=wiki@lodge.invalid",
+	}
+	_, err := g.run(nil, env, append([]string{"commit", "-q", "-m", message, "--"}, paths...)...)
+	return err
+}
