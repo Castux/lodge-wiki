@@ -1,4 +1,2 @@
 <h1>{{.Heading}}</h1>
-<div class="level1">
-{{if not .Pages}}<p>{{.Empty}}</p>{{else}}<ul>{{range .Pages}}<li class="level1"><div class="li"><a href="{{pageurl .ID}}" class="wikilink1">{{.Title}}</a> <span class="lw-quiet">{{.ID}}</span></div></li>{{end}}</ul>{{end}}
-</div>
+{{if not .Pages}}<p>{{.Empty}}</p>{{else}}<ul>{{range .Pages}}<li><a href="{{pageurl .ID}}">{{.Title}}</a> <span class="lw-quiet">{{.ID}}</span></li>{{end}}</ul>{{end}}

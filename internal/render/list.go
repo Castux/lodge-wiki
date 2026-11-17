@@ -64,7 +64,7 @@ func (pc *pageCtx) renderList(body string) string {
 	}
 
 	if o.Tree {
-		return `<div class="plugin_nspages">` + pc.tree(idx, ns, excluded, o) + `</div>`
+		return `<div class="pagelist tree">` + pc.tree(idx, ns, excluded, o) + `</div>`
 	}
 
 	var items, nsItems []listItem
@@ -96,26 +96,33 @@ func (pc *pageCtx) renderList(body string) string {
 	sortItems(nsItems, ListOptions{Sort: "title"})
 
 	var b strings.Builder
-	b.WriteString(`<div class="plugin_nspages">`)
+	cls := "pagelist"
+	if o.Pictures {
+		cls += " pictures"
+	}
+	b.WriteString(`<div class="` + cls + `">`)
 	if len(nsItems) > 0 {
 		if o.NSHeading != "" {
-			b.WriteString(`<p class="catpageheadline">` + html.EscapeString(o.NSHeading) + `</p>`)
+			b.WriteString(`<p class="pagelist-heading">` + html.EscapeString(o.NSHeading) + `</p>`)
 		}
 		pc.columns(&b, nsItems, o)
 	}
 	if o.Heading != "" {
-		b.WriteString(`<p class="catpageheadline">` + html.EscapeString(o.Heading) + `</p>`)
+		b.WriteString(`<p class="pagelist-heading">` + html.EscapeString(o.Heading) + `</p>`)
 	}
 	if o.Pictures {
 		for _, it := range items {
 			img := it.image
 			if img == "" {
-				img = "/_layout/default-picture.png"
-			} else if !strings.Contains(img, "?") {
+				// No picture on the page: a card with its title.
+				fmt.Fprintf(&b, `<a href="%s" class="no-picture">%s</a>`, html.EscapeString(wiki.PageURL(it.id)), html.EscapeString(it.title))
+				continue
+			}
+			if !strings.Contains(img, "?") {
 				img += "?w=200"
 			}
-			fmt.Fprintf(&b, `<a href="%s" class="media" title="%s"><img src="%s" class="media" loading="lazy" alt="" width="200"></a>`,
-				html.EscapeString(wiki.PageURL(it.id)), html.EscapeString(it.title), html.EscapeString(img))
+			fmt.Fprintf(&b, `<a href="%s" title="%s"><img src="%s" loading="lazy" alt="%s" width="200"></a>`,
+				html.EscapeString(wiki.PageURL(it.id)), html.EscapeString(it.title), html.EscapeString(img), html.EscapeString(it.title))
 		}
 	} else {
 		pc.columns(&b, items, o)
@@ -124,45 +131,30 @@ func (pc *pageCtx) renderList(body string) string {
 	return b.String()
 }
 
+// columns writes one list, laid out in columns by CSS.
 func (pc *pageCtx) columns(b *strings.Builder, items []listItem, o ListOptions) {
 	cols := o.Columns
 	if cols <= 0 {
 		cols = 3
 	}
-	if len(items) < cols {
-		cols = max(1, len(items))
-	}
-	per := (len(items) + cols - 1) / cols
+	cols = min(cols, max(1, len(items)))
 	tag := "ul"
 	if o.Numbered {
 		tag = "ol"
 	}
-	width := 100 / cols
-	for c := 0; c < cols; c++ {
-		lo, hi := c*per, min((c+1)*per, len(items))
-		if lo >= hi {
-			break
+	fmt.Fprintf(b, `<%s style="--columns: %d">`, tag, cols)
+	for _, it := range items {
+		label := it.title
+		if o.Label != "" {
+			label = itemLabel(o.Label, it)
 		}
-		fmt.Fprintf(b, `<div class="catpagecol" style="width: %d%%"><%s`, width, tag)
-		if o.Numbered && lo > 0 {
-			fmt.Fprintf(b, ` start="%d"`, lo+1)
+		date := ""
+		if o.Dates && it.info != nil && !it.info.Modified.IsZero() {
+			date = ` <span class="date">` + it.info.Modified.Format("2006/01/02") + `</span>`
 		}
-		b.WriteString(">")
-		for _, it := range items[lo:hi] {
-			label := it.title
-			if o.Label != "" {
-				label = itemLabel(o.Label, it)
-			}
-			date := ""
-			if o.Dates && it.info != nil && !it.info.Modified.IsZero() {
-				date = ` <span class="nspagesdate">` + it.info.Modified.Format("2006/01/02") + `</span>`
-			}
-			fmt.Fprintf(b, `<li><a href="%s" title="%s">%s</a>%s</li>`,
-				html.EscapeString(wiki.PageURL(it.id)), html.EscapeString(it.id), html.EscapeString(label), date)
-		}
-		fmt.Fprintf(b, "</%s></div>", tag)
+		fmt.Fprintf(b, `<li><a href="%s">%s</a>%s</li>`, html.EscapeString(wiki.PageURL(it.id)), html.EscapeString(label), date)
 	}
-	b.WriteString(`<div class="catpageeofidx"></div>`)
+	fmt.Fprintf(b, "</%s>", tag)
 }
 
 func (pc *pageCtx) tree(idx *wiki.Index, ns string, excluded map[string]bool, o ListOptions) string {
@@ -182,7 +174,7 @@ func (pc *pageCtx) tree(idx *wiki.Index, ns string, excluded map[string]bool, o 
 		if p, ok := idx.Pages[start]; ok {
 			t = p.Title
 		}
-		fmt.Fprintf(&b, `<li class="node"><a href="%s">%s</a>%s</li>`,
+		fmt.Fprintf(&b, `<li class="folder"><a href="%s">%s</a>%s</li>`,
 			html.EscapeString(wiki.PageURL(start)), html.EscapeString(t), pc.tree(idx, s, excluded, o))
 	}
 	for _, it := range items {

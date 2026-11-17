@@ -241,14 +241,16 @@ func (s *Server) crumbs(id, title string) []Crumb {
 func (s *Server) tools(v *View) []Tool {
 	var t []Tool
 	pagePath := strings.TrimPrefix(wiki.PageURL(v.ID), "/")
-	if v.CanEdit {
+	// Special pages (search, recent changes...) have no page tools.
+	isPage := !strings.HasPrefix(v.ID, "_")
+	if v.CanEdit && isPage {
 		label := "Edit"
 		if !v.Exists {
 			label = "Create"
 		}
 		t = append(t, Tool{Name: "edit", Label: label, URL: "/_/edit/" + pagePath, Active: v.Mode == "edit"})
 	}
-	if v.Exists || v.Mode == "history" {
+	if isPage && (v.Exists || v.Mode == "history") {
 		t = append(t, Tool{Name: "history", Label: "History", URL: "/_/history/" + pagePath, Active: v.Mode == "history"})
 		if v.CanEdit && v.Exists {
 			t = append(t, Tool{Name: "move", Label: "Rename", URL: "/_/move/" + pagePath, Active: v.Mode == "move"})

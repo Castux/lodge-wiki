@@ -87,16 +87,6 @@
     window.addEventListener("beforeunload", e => { if (dirty) { e.preventDefault(); e.returnValue = ""; } });
   }
 
-  // Table of contents: collapsible, state remembered.
-  document.querySelectorAll(".dw__toc h3.toggle").forEach(h => {
-    const box = h.parentElement;
-    if (localStorage.getItem("lw-toc-closed") === "1") box.classList.add("lw-closed");
-    h.addEventListener("click", () => {
-      box.classList.toggle("lw-closed");
-      localStorage.setItem("lw-toc-closed", box.classList.contains("lw-closed") ? "1" : "0");
-    });
-  });
-
   // Keyboard: "e" edits, "/" searches (when not typing).
   document.addEventListener("keydown", e => {
     const t = e.target;

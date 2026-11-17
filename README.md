@@ -43,10 +43,9 @@ Media files (images, sounds, pdfs) are in `../lodge-data/_media/`, which is git-
 | --- | --- |
 | `main.go` | command line |
 | `internal/wiki` | page ids, the content store, the git write queue, the in-memory index |
-| `internal/render` | markdown to HTML (goldmark), shaped like DokuWiki's output so the old CSS applies; `list` blocks |
+| `internal/render` | markdown to HTML (goldmark): heading ids, link classes (`missing`, `external`), scaled images, the table of contents, `list` blocks |
 | `internal/server` | HTTP: pages, editor, history, diff, search, rename, media, the widget API; built-in UI in `ui/` and `static/` |
 | `migrate/` | the one-off DokuWiki migration script and its report |
-| `tools/dokuwiki-css` | compiles the old DokuWiki templates' LESS into the layouts' `style.css` |
 | `tools/checkrender` | renders every page and lists leftover syntax and broken links |
 
 ## Widget API

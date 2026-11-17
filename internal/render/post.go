@@ -17,8 +17,8 @@ func jsonMarshal(v any) (string, error) {
 	return string(b), err
 }
 
-// SectionID turns a heading text into an anchor id, like DokuWiki's
-// sectionID.
+// SectionID turns a heading text into an anchor id (lowercase, '-' for
+// spaces and punctuation), the same slugs the migrated links use.
 func SectionID(text string) string {
 	id := strings.NewReplacer("/", "", ".", "").Replace(wiki.CleanID(text))
 	if id == "" {
@@ -36,6 +36,11 @@ func attr(t *nethtml.Token, key string) (string, bool) {
 		}
 	}
 	return "", false
+}
+
+func hasAttr(t *nethtml.Token, key string) bool {
+	_, ok := attr(t, key)
+	return ok
 }
 
 func setAttr(t *nethtml.Token, key, val string) {
@@ -66,30 +71,21 @@ func addClass(t *nethtml.Token, cls string) {
 	}
 }
 
-// postProcess reshapes goldmark's HTML into DokuWiki-like markup and
-// returns the headings found at the top level.
+// postProcess finishes goldmark's HTML: heading ids, link classes
+// (missing pages, external sites), scaled and linked images, scrollable
+// tables. It returns the headings found at the top level, for the TOC.
 func postProcess(pageID, src string, store *wiki.Store) (string, []Heading) {
 	z := nethtml.NewTokenizer(strings.NewReader(src))
 	var out strings.Builder
 	var heads []Heading
 	used := map[string]int{}
 
-	depth := 0
-	sectionOpen := false
-	inLink := 0
-
-	// heading buffering
-	var headTok *nethtml.Token
-	var headBuf strings.Builder
-	var headText strings.Builder
-	headDepth := 0
-
-	// lists: stack of "li has an open div.li"
-	var liStack []bool
-	listLevel := 0
+	depth, inLink := 0, 0
+	var head *nethtml.Token // top-level heading being read
+	var headBuf, headText strings.Builder
 
 	write := func(s string) {
-		if headTok != nil {
+		if head != nil {
 			headBuf.WriteString(s)
 		} else {
 			out.WriteString(s)
@@ -104,74 +100,53 @@ func postProcess(pageID, src string, store *wiki.Store) (string, []Heading) {
 		raw := string(z.Raw())
 		switch tt {
 		case nethtml.TextToken:
-			if headTok != nil {
+			if head != nil {
 				headText.WriteString(html.UnescapeString(raw))
 			}
 			write(raw)
-			continue
+
 		case nethtml.StartTagToken, nethtml.SelfClosingTagToken:
 			t := z.Token()
 			name := t.Data
-			isVoid := voidTags[name] || tt == nethtml.SelfClosingTagToken
-
 			switch {
-			case depth == 0 && len(name) == 2 && name[0] == 'h' && name[1] >= '1' && name[1] <= '6' && headTok == nil:
+			case depth == 0 && head == nil && len(name) == 2 && name[0] == 'h' && name[1] >= '1' && name[1] <= '6':
 				tok := t
-				headTok = &tok
+				head = &tok
 				headBuf.Reset()
 				headText.Reset()
-				headDepth = depth
-				depth++
-				continue
 			case name == "a":
 				inLink++
 				fixLink(pageID, &t, store)
 				write(t.String())
-			case name == "img":
-				src, _ := attr(&t, "src")
-				mp := wiki.MediaPath(src)
-				if mp == "" {
-					write(raw)
-					break
-				}
-				full := "/_media/" + mp
+			case name == "img" && wiki.MediaPath(attrOr(&t, "src")) != "":
+				full := "/_media/" + wiki.MediaPath(attrOr(&t, "src"))
 				fixImage(&t)
 				if inLink == 0 {
-					write(`<a href="` + html.EscapeString(full) + `" class="media" target="_blank">` + t.String() + `</a>`)
+					// Clicking an image opens the full-size file.
+					write(`<a href="` + html.EscapeString(full) + `" class="image" target="_blank">` + t.String() + `</a>`)
 				} else {
 					write(t.String())
 				}
-			case name == "table" && !hasAttr(&t, "class"):
-				addClass(&t, "inline")
-				write(`<div class="table">` + t.String())
-			case name == "ul" || name == "ol":
-				if n := len(liStack); n > 0 && liStack[n-1] {
-					write("</div>")
-					liStack[n-1] = false
-				}
-				listLevel++
-				write(raw)
-			case name == "li":
-				addClass(&t, fmt.Sprintf("level%d", listLevel))
-				write(t.String() + `<div class="li">`)
-				liStack = append(liStack, true)
+			case name == "table":
+				write(`<div class="table-wrap">` + raw)
 			default:
 				write(raw)
 			}
-			if !isVoid {
+			if !voidTags[name] && tt != nethtml.SelfClosingTagToken {
 				depth++
 			}
+
 		case nethtml.EndTagToken:
 			name, _ := z.TagName()
 			n := string(name)
 			if !voidTags[n] {
 				depth--
 			}
-			if headTok != nil && depth == headDepth && n == headTok.Data {
+			switch {
+			case head != nil && depth == 0 && n == head.Data:
 				text := strings.TrimSpace(headText.String())
-				level := int(headTok.Data[1] - '0')
-				id, ok := attr(headTok, "id")
-				if !ok || id == "" {
+				id := attrOr(head, "id")
+				if id == "" {
 					id = SectionID(text)
 				}
 				if c, seen := used[id]; seen {
@@ -180,68 +155,46 @@ func postProcess(pageID, src string, store *wiki.Store) (string, []Heading) {
 				} else {
 					used[id] = 0
 				}
-				if sectionOpen {
-					out.WriteString("</div>\n")
-				}
-				setAttr(headTok, "id", id)
-				out.WriteString(headTok.String() + headBuf.String() + "</" + headTok.Data + ">\n")
-				out.WriteString(fmt.Sprintf(`<div class="level%d">`, level))
-				sectionOpen = true
-				heads = append(heads, Heading{Level: level, ID: id, Text: text})
-				headTok = nil
-				continue
-			}
-			switch n {
-			case "a":
+				setAttr(head, "id", id)
+				out.WriteString(head.String() + headBuf.String() + "</" + head.Data + ">")
+				heads = append(heads, Heading{Level: int(head.Data[1] - '0'), ID: id, Text: text})
+				head = nil
+			case n == "a":
 				if inLink > 0 {
 					inLink--
 				}
 				write(raw)
-			case "table":
+			case n == "table":
 				write(raw + "</div>")
-			case "li":
-				if k := len(liStack); k > 0 {
-					if liStack[k-1] {
-						write("</div>")
-					}
-					liStack = liStack[:k-1]
-				}
-				write(raw)
-			case "ul", "ol":
-				listLevel--
-				write(raw)
 			default:
 				write(raw)
 			}
+
 		default:
 			write(raw)
 		}
 	}
-	if sectionOpen {
-		out.WriteString("\n</div>\n")
-	}
 	return out.String(), heads
 }
 
-func hasAttr(t *nethtml.Token, key string) bool {
-	_, ok := attr(t, key)
-	return ok
+func attrOr(t *nethtml.Token, key string) string {
+	v, _ := attr(t, key)
+	return v
 }
 
+// fixLink classifies a link: external sites get "external" (and open
+// with rel=nofollow), links to missing pages get "missing", internal links
+// are normalised to the page's canonical URL.
 func fixLink(pageID string, t *nethtml.Token, store *wiki.Store) {
 	href, ok := attr(t, "href")
-	if !ok || href == "" || strings.HasPrefix(href, "#") {
+	if !ok || href == "" || strings.HasPrefix(href, "#") || strings.HasPrefix(href, "mailto:") {
 		return
 	}
 	if c, _ := attr(t, "class"); strings.Contains(c, "footnote") {
 		return
 	}
-	if strings.HasPrefix(href, "mailto:") {
-		addClass(t, "mail")
-		return
-	}
 	if wiki.MediaPath(href) != "" {
-		addClass(t, "media mediafile")
+		addClass(t, "file")
 		return
 	}
 	u, err := url.Parse(href)
@@ -249,10 +202,7 @@ func fixLink(pageID string, t *nethtml.Token, store *wiki.Store) {
 		return
 	}
 	if u.Scheme != "" || u.Host != "" {
-		addClass(t, "urlextern")
-		if !hasAttr(t, "title") {
-			setAttr(t, "title", href)
-		}
+		addClass(t, "external")
 		setAttr(t, "rel", "ugc nofollow")
 		return
 	}
@@ -260,47 +210,36 @@ func fixLink(pageID string, t *nethtml.Token, store *wiki.Store) {
 	if !ok {
 		return
 	}
-	// Normalise the URL so relative links work from start pages too.
 	clean := wiki.PageURL(id)
 	if frag != "" {
 		clean += "#" + frag
 	}
 	setAttr(t, "href", clean)
-	if store != nil && store.Linkable(id) {
-		addClass(t, "wikilink1")
-		if !hasAttr(t, "title") {
-			setAttr(t, "title", id)
-		}
-	} else {
-		addClass(t, "wikilink2")
+	if store != nil && !store.Linkable(id) {
+		addClass(t, "missing")
 		setAttr(t, "rel", "nofollow")
 		if !hasAttr(t, "title") {
-			setAttr(t, "title", id+" (page does not exist)")
+			setAttr(t, "title", "This page does not exist yet")
 		}
 	}
 }
 
-// fixImage adds DokuWiki's media classes, turns align into a class and
-// asks the server for a scaled copy when a size is given.
+// fixImage turns align into a class (left, right, center), lazy-loads
+// the image and asks the server for a scaled copy when a size is given.
 func fixImage(t *nethtml.Token) {
-	src, _ := attr(t, "src")
-	cls := "media"
 	if a, ok := attr(t, "align"); ok {
 		switch strings.ToLower(a) {
-		case "right":
-			cls = "mediaright"
-		case "left":
-			cls = "medialeft"
+		case "right", "left":
+			addClass(t, strings.ToLower(a))
 		case "center", "middle":
-			cls = "mediacenter"
+			addClass(t, "center")
 		}
 		delAttr(t, "align")
 	}
-	addClass(t, cls)
 	if !hasAttr(t, "loading") {
 		setAttr(t, "loading", "lazy")
 	}
-	u, err := url.Parse(src)
+	u, err := url.Parse(attrOr(t, "src"))
 	if err != nil || u.RawQuery != "" {
 		return
 	}
@@ -336,46 +275,34 @@ func isRaster(p string) bool {
 	return false
 }
 
+// buildTOC lists headings of levels 1 to 3 as nested lists.
 func buildTOC(heads []Heading) string {
 	var b strings.Builder
-	b.WriteString(`<div id="dw__toc" class="dw__toc"><h3 class="toggle">Table of Contents</h3><div><ul class="toc">`)
-	cur := 0
-	open := []bool{}
+	b.WriteString(`<nav class="toc" aria-label="Contents"><h2>Contents</h2>`)
+	var stack []int // heading level of each open <ul>
 	for _, h := range heads {
 		if h.Level > 3 {
 			continue
 		}
-		if cur == 0 {
-			cur = h.Level
-			open = append(open, false)
-		}
-		for h.Level > cur {
-			b.WriteString(`<ul class="toc">`)
-			cur++
-			open = append(open, false)
-		}
-		for h.Level < cur && len(open) > 1 {
-			if open[len(open)-1] {
-				b.WriteString("</li>")
+		switch {
+		case len(stack) == 0:
+			b.WriteString("<ul>")
+			stack = append(stack, h.Level)
+		case h.Level > stack[len(stack)-1]:
+			b.WriteString("<ul>") // nested inside the open <li>
+			stack = append(stack, h.Level)
+		default:
+			for len(stack) > 1 && h.Level < stack[len(stack)-1] {
+				b.WriteString("</li></ul>")
+				stack = stack[:len(stack)-1]
 			}
-			b.WriteString("</ul>")
-			open = open[:len(open)-1]
-			cur--
-		}
-		if open[len(open)-1] {
 			b.WriteString("</li>")
 		}
-		fmt.Fprintf(&b, `<li class="level%d"><div class="li"><a href="#%s">%s</a></div>`, h.Level, html.EscapeString(h.ID), html.EscapeString(h.Text))
-		open[len(open)-1] = true
+		fmt.Fprintf(&b, `<li><a href="#%s">%s</a>`, html.EscapeString(h.ID), html.EscapeString(h.Text))
 	}
-	for i := len(open) - 1; i >= 0; i-- {
-		if open[i] {
-			b.WriteString("</li>")
-		}
-		if i > 0 {
-			b.WriteString("</ul>")
-		}
+	for i := len(stack); i > 0; i-- {
+		b.WriteString("</li></ul>")
 	}
-	b.WriteString("</ul></div></div>")
+	b.WriteString("</nav>")
 	return b.String()
 }

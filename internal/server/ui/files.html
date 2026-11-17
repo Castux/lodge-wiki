@@ -1,5 +1,4 @@
 <h1>Files</h1>
-<div class="level1">
 <p class="lw-files-path"><a href="/_/files">content</a>{{range .Crumbs}} / <a href="{{.URL}}">{{.Title}}</a>{{end}}</p>
 {{if .Saved}}<p class="lw-note">{{if .InMedia}}{{.Saved}}.{{else}}Saved {{.Saved}}.{{end}}</p>{{end}}
 
@@ -64,4 +63,3 @@
 {{end}}
 {{if not .IsAdmin}}<p class="lw-quiet">Layouts and widgets (folders starting with <code>_</code>) can only be changed by admins.</p>{{end}}
 {{end}}
-</div>

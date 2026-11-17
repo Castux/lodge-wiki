@@ -38,6 +38,7 @@
 table.lw-history { border-collapse: collapse; width: 100%; }
 table.lw-history th, table.lw-history td { text-align: left; padding: .3em .6em; border-bottom: 1px solid #ddd6c8; vertical-align: top; }
 .lw-actions { white-space: nowrap; }
+table.lw-history td:first-child { white-space: nowrap; }
 pre.lw-diff { white-space: pre-wrap; word-break: break-word; font: 13px/1.45 ui-monospace, Consolas, monospace; background: #fff; border: 1px solid #ddd6c8; padding: .5em; }
 pre.lw-diff span { display: block; padding: 0 .4em; min-height: 1.45em; }
 .lw-add { background: #e6ffec; } .lw-add::before { content: "+ "; color: #1a7f37; }
@@ -51,9 +52,6 @@ pre.lw-diff span { display: block; padding: 0 .4em; min-height: 1.45em; }
 .lw-index ul { list-style: none; padding-left: 1.2em; }
 .lw-index summary { cursor: pointer; }
 
-/* Table of contents collapse */
-.dw__toc.lw-closed > div { display: none; }
-.dw__toc h3.toggle { cursor: pointer; }
 
 /* Widgets */
 .widget { margin: 1em 0; }

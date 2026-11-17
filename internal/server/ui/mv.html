@@ -1,5 +1,4 @@
 <h1>Move or rename <code>{{.Path}}</code></h1>
-<div class="level1">
 <form method="post" action="/_/mv" class="lw-form">
   {{if .Error}}<p class="lw-error">{{.Error}}</p>{{end}}
   <input type="hidden" name="path" value="{{.Path}}">
@@ -19,4 +18,3 @@
   {{end}}
   <button class="lw-button lw-primary">Move</button> <a href="{{.Back}}" class="lw-button">Cancel</a>
 </form>
-</div>

@@ -17,15 +17,15 @@ import (
 )
 
 var leftovers = map[string]*regexp.Regexp{
-	"[[":       regexp.MustCompile(`\[\[`),
-	"{{":       regexp.MustCompile(`\{\{`),
-	"**":       regexp.MustCompile(`\*\*`),
-	"//":       regexp.MustCompile(`(^|\s)//\S`),
-	"''":       regexp.MustCompile(`''\S`),
-	"====":     regexp.MustCompile(`====`),
-	"<wrap":    regexp.MustCompile(`(?i)<wrap`),
-	"\\\\":     regexp.MustCompile(`\\`),
-	"&lt;tag":  regexp.MustCompile(`<[a-zA-Z]+[ >]`),
+	"[[":      regexp.MustCompile(`\[\[`),
+	"{{":      regexp.MustCompile(`\{\{`),
+	"**":      regexp.MustCompile(`\*\*`),
+	"//":      regexp.MustCompile(`(^|\s)//\S`),
+	"''":      regexp.MustCompile(`''\S`),
+	"====":    regexp.MustCompile(`====`),
+	"<wrap":   regexp.MustCompile(`(?i)<wrap`),
+	"\\\\":    regexp.MustCompile(`\\`),
+	"&lt;tag": regexp.MustCompile(`<[a-zA-Z]+[ >]`),
 }
 
 func main() {
@@ -46,10 +46,7 @@ func main() {
 	for _, id := range ids {
 		p, _ := store.ReadPage(id)
 		html := r.Render(p).HTML
-		for _, href := range regexp.MustCompile(`class="[^"]*wikilink2[^"]*"`).FindAllString(html, -1) {
-			_ = href
-		}
-		for _, m := range regexp.MustCompile(`<a href="([^"]*)"[^>]*wikilink2`).FindAllStringSubmatch(html, -1) {
+		for _, m := range regexp.MustCompile(`<a href="([^"]*)"[^>]*class="[^"]*missing`).FindAllStringSubmatch(html, -1) {
 			missing[m[1]] = append(missing[m[1]], id)
 		}
 		text := visibleText(html)

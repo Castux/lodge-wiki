@@ -1,5 +1,4 @@
 <h1>Log in</h1>
-<div class="level1">
 <form method="post" action="/_/login" class="lw-form lw-login">
   {{if .Error}}<p class="lw-error">{{.Error}}</p>{{end}}
   <input type="hidden" name="next" value="{{.Next}}">
@@ -7,4 +6,3 @@
   <label>Password <input name="password" type="password" autocomplete="current-password" required></label>
   <button type="submit" class="lw-button lw-primary">Log in</button>
 </form>
-</div>

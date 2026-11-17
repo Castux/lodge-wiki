@@ -30,7 +30,7 @@
   </div>{{end}}
   <div class="lw-editor-panes lw-mode-write">
     <textarea name="text" class="lw-text" spellcheck="{{if .IsFile}}false{{else}}true{{end}}"{{if .ReadOnly}} readonly{{end}} autofocus>{{.Text}}</textarea>
-    <div class="lw-preview dokuwiki"><div class="page"></div></div>
+    <div class="lw-preview"><div class="page"></div></div>
   </div>
   <input type="hidden" name="base" value="{{.Base}}">
   <div class="lw-editor-foot">

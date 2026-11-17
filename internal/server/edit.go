@@ -241,7 +241,21 @@ func (s *Server) search(w http.ResponseWriter, r *http.Request) {
 		Content: s.ui_("search.html", map[string]any{"Q": q, "Hits": hits})})
 }
 
+var (
+	snipImage = regexp.MustCompile(`!\[[^\]]*\]\([^)]*\)|<[^>]+>`)
+	snipLink  = regexp.MustCompile(`\[([^\]]*)\]\([^)]*\)`)
+	snipMarks = regexp.MustCompile("(?m)^#+\\s*|[*_`]{1,3}|^>\\s*")
+)
+
+// plainText strips the markdown and HTML that would clutter a snippet.
+func plainText(s string) string {
+	s = snipImage.ReplaceAllString(s, " ")
+	s = snipLink.ReplaceAllString(s, "$1")
+	return snipMarks.ReplaceAllString(s, "")
+}
+
 func snippet(text, word string) string {
+	text = plainText(text)
 	i := strings.Index(text, word)
 	if i < 0 {
 		i = 0

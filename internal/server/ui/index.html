@@ -1,8 +1,8 @@
 <h1>Index</h1>
-<div class="level1 lw-index">
+<div class="lw-index">
 {{template "indexnode" .}}
 </div>
 {{define "indexnode"}}<ul>
 {{range .Subs}}<li class="lw-ns"><details{{if not .NS}} open{{end}}><summary><strong>{{.Title}}</strong> <span class="lw-quiet">{{.NS}}/</span></summary>{{template "indexnode" .}}</details></li>{{end}}
-{{range .Pages}}<li><a href="{{pageurl .ID}}" class="wikilink1">{{.Title}}</a></li>{{end}}
+{{range .Pages}}<li><a href="{{pageurl .ID}}">{{.Title}}</a></li>{{end}}
 </ul>{{end}}

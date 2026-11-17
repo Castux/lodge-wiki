@@ -1,5 +1,4 @@
 <h1>Users</h1>
-<div class="level1">
 {{if .Msg}}<p class="lw-note">{{.Msg}}</p>{{end}}
 {{if .Error}}<p class="lw-error">{{.Error}}</p>{{end}}
 <p class="lw-quiet">{{len .Rows}} accounts{{range $k, $v := .Counts}} · {{$v}} {{$k}}{{end}}.
@@ -44,4 +43,3 @@
   <label>Role <select name="role">{{range .Roles}}<option{{if eq . "editor"}} selected{{end}}>{{.}}</option>{{end}}</select></label>
   <button class="lw-button lw-primary">Add</button>
 </form>
-</div>

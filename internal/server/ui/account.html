@@ -1,5 +1,4 @@
 <h1>Your account</h1>
-<div class="level1">
 <p><strong>{{.User.Name}}</strong>{{if .User.RealName}} ({{.User.RealName}}){{end}} · {{.Role}}</p>
 {{if eq .Saved "profile"}}<p class="lw-note">Profile saved.</p>{{else if .Saved}}<p class="lw-note">Password changed. You stay logged in here; other devices are logged out.</p>{{end}}
 {{if .Error}}<p class="lw-error">{{.Error}}</p>{{end}}
@@ -21,4 +20,3 @@
   <label>New password again <input type="password" name="again" autocomplete="new-password" minlength="8" required></label>
   <button class="lw-button lw-primary">Change password</button>
 </form>
-</div>
