@@ -34,7 +34,7 @@ func main() {
 		abs, _ := filepath.Abs(*root)
 		*state = filepath.Join(filepath.Dir(abs), "lodge-state")
 	}
-	auth, err := server.NewAuthFor(*state)
+	auth, err := server.NewAuthFor(*state, *root)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -45,14 +45,14 @@ func main() {
 		if pw == "" {
 			log.Fatal("empty password")
 		}
-		if err := auth.SetPassword(*setPassword, pw, server.RoleAdmin); err != nil {
+		if err := auth.SetPassword(*setPassword, pw, server.RoleAdmin, "lodge-wiki"); err != nil {
 			log.Fatal(err)
 		}
 		fmt.Fprintln(os.Stderr, "Saved account", *setPassword)
 		return
 	}
 	if *importUsers != "" {
-		added, err := auth.ImportDokuWiki(*importUsers, map[string]bool{"carto": true, "bot": true})
+		added, err := auth.ImportDokuWiki(*importUsers, map[string]bool{"carto": true, "bot": true}, "lodge-wiki")
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -63,7 +63,7 @@ func main() {
 		b := make([]byte, 12)
 		rand.Read(b)
 		pw := base64.RawURLEncoding.EncodeToString(b)
-		if err := auth.SetPassword("admin", pw, server.RoleAdmin); err != nil {
+		if err := auth.SetPassword("admin", pw, server.RoleAdmin, "lodge-wiki"); err != nil {
 			log.Fatal(err)
 		}
 		fmt.Printf("\nCreated account  admin / %s\n(change it with: go run . --root %s --set-password admin)\n\n", pw, *root)

@@ -33,7 +33,7 @@ func (s *Server) media(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	rel := path.Clean(strings.TrimPrefix(r.URL.Path, "/"))
-	if strings.Contains(rel, "..") || !strings.HasPrefix(rel, "_media/") {
+	if strings.Contains(rel, "..") || !strings.HasPrefix(rel, "_media/") || strings.Contains(rel, "/.") {
 		http.NotFound(w, r)
 		return
 	}
@@ -269,6 +269,14 @@ func (s *Server) mediaUpload(w http.ResponseWriter, r *http.Request) {
 	if err := os.MkdirAll(filepath.Dir(full), 0o755); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
+	}
+	if _, err := os.Stat(full); err == nil {
+		old := s.trashPath(path.Join(ns, name))
+		if err := os.MkdirAll(filepath.Dir(old), 0o755); err == nil {
+			if err := os.Rename(full, old); err == nil {
+				log.Printf("replaced %s; previous version kept in %s", rel, old)
+			}
+		}
 	}
 	tmp := full + ".upload"
 	out, err := os.Create(tmp)

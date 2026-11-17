@@ -63,6 +63,21 @@ func fileAccess(file string) (ok, admin bool) {
 	return true, admin
 }
 
+// isPrivate reports whether a repo path is in a private folder (_config):
+// only admins may see it at all, in Files, history and diffs.
+func isPrivate(file string) bool {
+	return file == "_config" || strings.HasPrefix(file, "_config/")
+}
+
+// hidePrivate answers 404 to non-admins for private files.
+func (s *Server) hidePrivate(w http.ResponseWriter, r *http.Request, id string) bool {
+	if isPrivate(fileOf(id)) && !s.can(r, RoleAdmin) {
+		http.NotFound(w, r)
+		return true
+	}
+	return false
+}
+
 func (s *Server) checkEditable(w http.ResponseWriter, r *http.Request, id string) bool {
 	ok, admin := fileAccess(fileOf(id))
 	if !ok {
@@ -224,7 +239,7 @@ func (s *Server) files(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	} else if dir != "" && !inMedia {
-		if ok, _ := fileAccess(dir); !ok {
+		if ok, _ := fileAccess(dir); !ok || (isPrivate(dir) && !s.can(r, RoleAdmin)) {
 			http.Error(w, "bad folder", http.StatusBadRequest)
 			return
 		}
@@ -263,7 +278,7 @@ func (s *Server) files(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 		ok, admin := fileAccess(rel)
-		if !ok {
+		if !ok || (isPrivate(rel) && !isAdmin) {
 			continue
 		}
 		fe := FileEntry{Name: e.Name(), Path: rel, Dir: e.IsDir(), Admin: admin}

@@ -22,7 +22,7 @@ import (
 // media folder), or media files and folders. Every link and image
 // reference to what moved is rewritten in the same commit, so nothing
 // breaks. Media files are not in git: they are renamed on disk, and
-// deleting one moves it to <state>/trash instead of erasing it.
+// deleting one moves it to _media/.trash instead of erasing it.
 
 var (
 	linkHrefRe  = regexp.MustCompile(`(\]\(\s*<?|href=")([^)\s>"]+)`)
@@ -356,7 +356,14 @@ func (s *Server) moveForm(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/_/mv?path="+url.QueryEscape(idFrom(r, "/_/move/")+".md"), http.StatusSeeOther)
 }
 
-// mediaRemove moves an unused media file or folder to <state>/trash.
+// trashPath is where a deleted or replaced media file goes: next to the
+// media (so media backups include it), in a dated folder that is never
+// listed or served.
+func (s *Server) trashPath(m string) string {
+	return filepath.Join(s.store.File("_media/.trash"), time.Now().Format("2006-01-02_150405"), filepath.FromSlash(m))
+}
+
+// mediaRemove moves an unused media file or folder to _media/.trash.
 func (s *Server) mediaRemove(w http.ResponseWriter, r *http.Request) {
 	m := strings.Trim(strings.TrimPrefix(strings.Trim(r.FormValue("path"), "/"), "_media/"), "/")
 	if ok, _ := fileAccess(m); !ok || m == "" {
@@ -380,7 +387,7 @@ func (s *Server) mediaRemove(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "still used by: "+strings.Join(users, ", "), http.StatusConflict)
 		return
 	}
-	dst := filepath.Join(s.cfg.State, "trash", time.Now().Format("2006-01-02_150405"), "_media", filepath.FromSlash(m))
+	dst := s.trashPath(m)
 	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

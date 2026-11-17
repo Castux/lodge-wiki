@@ -17,6 +17,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Castux/lodge-wiki/internal/wiki"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -45,10 +46,18 @@ type User struct {
 	Since int64 `json:"since,omitempty"`
 }
 
-// Auth stores accounts in <state>/users.json and signs session cookies
-// with a key in <state>/session.key. Neither lives in the content repo.
+// UsersFile is where accounts live in the content repo. Folders named
+// _config are private: only admins can see them.
+const UsersFile = "_config/users.json"
+
+// Auth keeps the accounts in the content repo (_config/users.json, so they
+// are versioned and backed up with everything else; every change is a
+// commit) and signs session cookies with a key in <state>/session.key.
+// The key is the only secret kept outside the repo: whoever holds it can
+// forge a login, and losing it merely logs everyone out.
 type Auth struct {
-	file  string
+	git   *wiki.Git
+	file  string // absolute path of UsersFile
 	key   []byte
 	mu    sync.RWMutex
 	users map[string]*User
@@ -59,9 +68,11 @@ type Auth struct {
 const cookieName = "lodge_session"
 const sessionLife = 90 * 24 * time.Hour
 
-// NewAuth loads (or creates) the account store.
-func NewAuth(state string) (*Auth, error) {
-	a := &Auth{file: filepath.Join(state, "users.json"), users: map[string]*User{}}
+// NewAuth loads the accounts from the content repo and the session key
+// from the state folder (creating it). Accounts from an older layout
+// (<state>/users.json) are moved into the repo.
+func NewAuth(state string, git *wiki.Git) (*Auth, error) {
+	a := &Auth{git: git, file: filepath.Join(git.Dir, filepath.FromSlash(UsersFile)), users: map[string]*User{}}
 	keyFile := filepath.Join(state, "session.key")
 	key, err := os.ReadFile(keyFile)
 	if err != nil {
@@ -76,13 +87,30 @@ func NewAuth(state string) (*Auth, error) {
 		key = k
 	}
 	a.key = key
-	if b, err := os.ReadFile(a.file); err == nil {
+
+	old := filepath.Join(state, "users.json")
+	src := a.file
+	if _, err := os.Stat(a.file); err != nil {
+		if _, err := os.Stat(old); err == nil {
+			src = old
+		}
+	}
+	if b, err := os.ReadFile(src); err == nil {
 		if err := json.Unmarshal(b, &a.users); err != nil {
-			return nil, fmt.Errorf("%s: %w", a.file, err)
+			return nil, fmt.Errorf("%s: %w", src, err)
 		}
 	}
 	for n, u := range a.users {
 		u.Name = n
+	}
+	if src == old {
+		a.mu.Lock()
+		err := a.saveLocked("lodge-wiki", "accounts: move into the content repo")
+		a.mu.Unlock()
+		if err != nil {
+			return nil, err
+		}
+		os.Rename(old, old+".moved-to-repo")
 	}
 	return a, nil
 }
@@ -95,29 +123,29 @@ func (a *Auth) HasUsers() bool {
 }
 
 // SetPassword creates or updates an account.
-func (a *Auth) SetPassword(name, password string, role Role) error {
+func (a *Auth) SetPassword(name, password string, role Role, author string) error {
 	h, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		return err
 	}
 	a.mu.Lock()
 	defer a.mu.Unlock()
+	msg := "accounts: add " + name
 	if u, ok := a.users[name]; ok {
 		u.Hash, u.Role, u.Since = string(h), role, time.Now().Unix()
+		msg = "accounts: new password for " + name
 	} else {
 		a.users[name] = &User{Name: name, Hash: string(h), Role: role}
 	}
-	return a.saveLocked()
+	return a.saveLocked(author, msg)
 }
 
-// saveLocked writes users.json; the caller holds a.mu.
-func (a *Auth) saveLocked() error {
+// saveLocked commits users.json; the caller holds a.mu. Messages stay
+// neutral (they show in recent changes): never passwords or emails.
+func (a *Auth) saveLocked(author, msg string) error {
 	b, _ := json.MarshalIndent(a.users, "", "  ")
-	tmp := a.file + ".tmp"
-	if err := os.WriteFile(tmp, b, 0o600); err != nil {
-		return err
-	}
-	return os.Rename(tmp, a.file)
+	_, err := a.git.Write(UsersFile, append(b, '\n'), "-", author, msg)
+	return err
 }
 
 // Check verifies a password.
@@ -222,9 +250,13 @@ func (s *Server) logout(w http.ResponseWriter, r *http.Request) {
 }
 
 // NewAuthFor opens the account store in a state folder, creating it.
-func NewAuthFor(state string) (*Auth, error) {
+func NewAuthFor(state, root string) (*Auth, error) {
 	if err := os.MkdirAll(state, 0o755); err != nil {
 		return nil, err
 	}
-	return NewAuth(state)
+	abs, err := filepath.Abs(root)
+	if err != nil {
+		return nil, err
+	}
+	return NewAuth(state, &wiki.Git{Dir: abs})
 }

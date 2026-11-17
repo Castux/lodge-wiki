@@ -30,12 +30,12 @@ To bring over the DokuWiki accounts (everyone keeps their password):
 go run . --root ../lodge-data --import-users ../public_html/conf/users.auth.php
 ```
 
-Accounts, the session key and the scaled-image cache live in a state folder outside the content repo (default `../lodge-state`, set with `--state`). They are never committed.
+Everything that matters (pages, data, layouts, widgets, accounts in `_config/users.json`) is in the content repo; media is in `_media/` next to it. The state folder (default `../lodge-state`, set with `--state`) only holds the session key and the scaled-image cache: it can be deleted at any time (everyone is logged out). Keep the content repo private: it holds password hashes and emails.
 
 | Flag | Default | Meaning |
 | --- | --- | --- |
 | `--root` | `../lodge-data` | content repository |
-| `--state` | `<root>/../lodge-state` | accounts, session key, image cache |
+| `--state` | `<root>/../lodge-state` | session key, image cache (disposable) |
 | `--addr` | `localhost:8080` | listen address |
 | `--title` | `The Chasers' Lodge` | site title |
 | `--public` | off | allow reading without logging in |

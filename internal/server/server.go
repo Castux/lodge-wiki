@@ -47,7 +47,7 @@ func New(cfg Config) (*Server, error) {
 	if err := os.MkdirAll(cfg.State, 0o755); err != nil {
 		return nil, err
 	}
-	auth, err := NewAuth(cfg.State)
+	auth, err := NewAuth(cfg.State, store.Git)
 	if err != nil {
 		return nil, err
 	}

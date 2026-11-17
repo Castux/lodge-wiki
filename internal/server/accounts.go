@@ -20,7 +20,7 @@ import (
 // admin → admin, user → editor, anything else → pending. Accounts listed in
 // skip (by user name or group), and accounts that already exist here, are
 // left alone.
-func (a *Auth) ImportDokuWiki(file string, skip map[string]bool) (added []string, err error) {
+func (a *Auth) ImportDokuWiki(file string, skip map[string]bool, author string) (added []string, err error) {
 	f, err := os.Open(file)
 	if err != nil {
 		return nil, err
@@ -66,7 +66,10 @@ func (a *Auth) ImportDokuWiki(file string, skip map[string]bool) (added []string
 		return nil, err
 	}
 	sort.Strings(added)
-	return added, a.saveLocked()
+	if len(added) == 0 {
+		return nil, nil
+	}
+	return added, a.saveLocked(author, fmt.Sprintf("accounts: import %d from DokuWiki", len(added)))
 }
 
 // List returns the accounts sorted by name.
@@ -82,7 +85,7 @@ func (a *Auth) List() []User {
 }
 
 // Update changes an account under the lock and saves.
-func (a *Auth) Update(name string, fn func(u *User)) error {
+func (a *Auth) Update(name, author, msg string, fn func(u *User)) error {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	u := a.users[name]
@@ -90,15 +93,15 @@ func (a *Auth) Update(name string, fn func(u *User)) error {
 		return fmt.Errorf("no account %q", name)
 	}
 	fn(u)
-	return a.saveLocked()
+	return a.saveLocked(author, msg)
 }
 
 // Delete removes an account.
-func (a *Auth) Delete(name string) error {
+func (a *Auth) Delete(name, author string) error {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	delete(a.users, name)
-	return a.saveLocked()
+	return a.saveLocked(author, "accounts: delete "+name)
 }
 
 func hashPassword(pw string) (string, error) {
@@ -159,7 +162,7 @@ func (s *Server) accountSave(w http.ResponseWriter, r *http.Request) {
 	}
 	h, err := hashPassword(pw)
 	if err == nil {
-		err = s.auth.Update(u.Name, func(x *User) { x.Hash, x.Since = h, time.Now().Unix() })
+		err = s.auth.Update(u.Name, u.Name, "accounts: new password for "+u.Name, func(x *User) { x.Hash, x.Since = h, time.Now().Unix() })
 	}
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -222,18 +225,20 @@ func (s *Server) usersSave(w http.ResponseWriter, r *http.Request) {
 			fail(fmt.Sprintf("The password must have at least %d characters.", minPassword))
 			return
 		}
-		if err := s.auth.SetPassword(name, pw, role); err != nil {
+		if err := s.auth.SetPassword(name, pw, role, me); err != nil {
 			fail(err.Error())
 			return
 		}
-		s.auth.Update(name, func(u *User) { u.RealName = strings.TrimSpace(r.FormValue("realname")) })
+		if rn := strings.TrimSpace(r.FormValue("realname")); rn != "" {
+			s.auth.Update(name, me, "accounts: real name of "+name, func(u *User) { u.RealName = rn })
+		}
 		done("Account " + name + " created.")
 	case "role":
 		if name == me && role != RoleAdmin {
 			fail("You cannot remove your own admin role.")
 			return
 		}
-		if err := s.auth.Update(name, func(u *User) { u.Role = role }); err != nil {
+		if err := s.auth.Update(name, me, "accounts: "+name+" is now "+RoleNames[role], func(u *User) { u.Role = role }); err != nil {
 			fail(err.Error())
 			return
 		}
@@ -246,7 +251,7 @@ func (s *Server) usersSave(w http.ResponseWriter, r *http.Request) {
 		}
 		h, err := hashPassword(pw)
 		if err == nil {
-			err = s.auth.Update(name, func(u *User) { u.Hash, u.Since = h, time.Now().Unix() })
+			err = s.auth.Update(name, me, "accounts: new password for "+name, func(u *User) { u.Hash, u.Since = h, time.Now().Unix() })
 		}
 		if err != nil {
 			fail(err.Error())
@@ -258,7 +263,7 @@ func (s *Server) usersSave(w http.ResponseWriter, r *http.Request) {
 			fail("You cannot delete your own account.")
 			return
 		}
-		if err := s.auth.Delete(name); err != nil {
+		if err := s.auth.Delete(name, me); err != nil {
 			fail(err.Error())
 			return
 		}

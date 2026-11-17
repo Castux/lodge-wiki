@@ -33,6 +33,9 @@ func (s *Server) preview(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) history(w http.ResponseWriter, r *http.Request) {
 	id := idFrom(r, "/_/history/")
+	if s.hidePrivate(w, r, id) {
+		return
+	}
 	revs, err := s.store.Git.Log(fileOf(id), 500)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -47,6 +50,9 @@ func (s *Server) history(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) revision(w http.ResponseWriter, r *http.Request) {
 	id := idFrom(r, "/_/rev/")
+	if s.hidePrivate(w, r, id) {
+		return
+	}
 	rev := r.URL.Query().Get("rev")
 	raw, err := s.store.Git.Show(rev, fileOf(id))
 	if err != nil {
@@ -71,6 +77,9 @@ type DiffLine struct {
 
 func (s *Server) diff(w http.ResponseWriter, r *http.Request) {
 	id := idFrom(r, "/_/diff/")
+	if s.hidePrivate(w, r, id) {
+		return
+	}
 	rev := r.URL.Query().Get("rev")
 	if rev == "" {
 		http.Error(w, "missing rev", http.StatusBadRequest)
