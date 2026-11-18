@@ -3,11 +3,13 @@ package wiki
 import (
 	"errors"
 	"io/fs"
+	"maps"
 	"os"
 	"path/filepath"
-	"sort"
+	"slices"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -15,7 +17,6 @@ import (
 type Page struct {
 	ID    string
 	Body  []byte // the markdown
-	Raw   []byte // the whole file (the same as Body: pages have no frontmatter)
 	Title string // first heading, else the page name
 }
 
@@ -24,8 +25,11 @@ type Store struct {
 	Root string
 	Git  *Git
 
-	mu    sync.RWMutex
-	index *Index
+	// The index is replaced whole, never changed in place: readers load
+	// it without a lock. indexMu serialises the rebuilds (Reindex and
+	// UpdateIndex), so neither can drop the other's update.
+	index   atomic.Pointer[Index]
+	indexMu sync.Mutex
 }
 
 // Open opens a content repository.
@@ -62,7 +66,7 @@ func (s *Store) ReadPage(id string) (*Page, error) {
 
 // ParsePage works out a page's title: its first heading, else its name.
 func ParsePage(id string, raw []byte) *Page {
-	p := &Page{ID: id, Raw: raw, Body: raw}
+	p := &Page{ID: id, Body: raw}
 	if h := FirstHeading(p.Body); h != "" {
 		p.Title = h
 	} else {
@@ -149,9 +153,7 @@ type Index struct {
 
 // Index returns the current index.
 func (s *Store) Index() *Index {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	return s.index
+	return s.index.Load()
 }
 
 // Exists reports whether a page exists.
@@ -170,6 +172,8 @@ func (s *Store) Title(id string) string {
 
 // Reindex rebuilds the whole index from disk and git history.
 func (s *Store) Reindex() error {
+	s.indexMu.Lock()
+	defer s.indexMu.Unlock()
 	idx := &Index{Pages: map[string]*PageInfo{}, Backlinks: map[string][]string{}, MediaUse: map[string][]string{}, Text: map[string]string{}}
 	err := filepath.WalkDir(s.Root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -209,6 +213,21 @@ func (s *Store) Reindex() error {
 	if err != nil {
 		return err
 	}
+	if hist, err := s.Git.FileTimes(); err == nil {
+		for id, p := range idx.Pages {
+			if h, ok := hist[id+".md"]; ok {
+				p.Created, p.Modified, p.Author, p.Creator = h.Created, h.Modified, h.Author, h.Creator
+			}
+		}
+	}
+	idx.link()
+	s.index.Store(idx)
+	return nil
+}
+
+// link builds the backlinks and media uses from the pages.
+func (idx *Index) link() {
+	idx.Backlinks, idx.MediaUse = map[string][]string{}, map[string][]string{}
 	for id, p := range idx.Pages {
 		for _, l := range p.Links {
 			idx.Backlinks[l] = append(idx.Backlinks[l], id)
@@ -218,33 +237,19 @@ func (s *Store) Reindex() error {
 		}
 	}
 	for _, v := range idx.Backlinks {
-		sort.Strings(v)
+		slices.Sort(v)
 	}
-	if hist, err := s.Git.FileTimes(); err == nil {
-		for id, p := range idx.Pages {
-			if h, ok := hist[id+".md"]; ok {
-				p.Created, p.Modified, p.Author, p.Creator = h.Created, h.Modified, h.Author, h.Creator
-			}
-		}
+	for _, v := range idx.MediaUse {
+		slices.Sort(v)
 	}
-	s.mu.Lock()
-	s.index = idx
-	s.mu.Unlock()
-	return nil
 }
 
 // UpdateIndex refreshes a single page after a write (cheaper than Reindex).
 func (s *Store) UpdateIndex(id, author string, when time.Time) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	old := s.index
-	idx := &Index{Pages: make(map[string]*PageInfo, len(old.Pages)), Backlinks: map[string][]string{}, MediaUse: map[string][]string{}, Text: make(map[string]string, len(old.Text))}
-	for k, v := range old.Pages {
-		idx.Pages[k] = v
-	}
-	for k, v := range old.Text {
-		idx.Text[k] = v
-	}
+	s.indexMu.Lock()
+	defer s.indexMu.Unlock()
+	old := s.Index()
+	idx := &Index{Pages: maps.Clone(old.Pages), Text: maps.Clone(old.Text)}
 	raw, err := os.ReadFile(s.PageFile(id))
 	if err != nil {
 		delete(idx.Pages, id)
@@ -261,18 +266,8 @@ func (s *Store) UpdateIndex(id, author string, when time.Time) {
 		idx.Pages[id] = info
 		idx.Text[id] = strings.ToLower(string(p.Body))
 	}
-	for pid, p := range idx.Pages {
-		for _, l := range p.Links {
-			idx.Backlinks[l] = append(idx.Backlinks[l], pid)
-		}
-		for _, m := range p.Media {
-			idx.MediaUse[m] = append(idx.MediaUse[m], pid)
-		}
-	}
-	for _, v := range idx.Backlinks {
-		sort.Strings(v)
-	}
-	s.index = idx
+	idx.link()
+	s.index.Store(idx)
 }
 
 // Children lists the pages directly in a namespace and its direct
@@ -298,8 +293,8 @@ func (idx *Index) Children(ns string) (pages []*PageInfo, subns []string) {
 		}
 		pages = append(pages, p)
 	}
-	sort.Slice(pages, func(i, j int) bool { return pages[i].ID < pages[j].ID })
-	sort.Strings(subns)
+	slices.SortFunc(pages, func(a, b *PageInfo) int { return strings.Compare(a.ID, b.ID) })
+	slices.Sort(subns)
 	return
 }
 

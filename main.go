@@ -1,19 +1,22 @@
-// Command lodge-wiki serves the Chaser's Lodge wiki from a content repo.
+// Command lodge-wiki serves the Chasers' Lodge wiki from a content repo.
 //
 //	go run . --root ../lodge-data
 package main
 
 import (
 	"bufio"
+	"context"
 	"crypto/rand"
-	"encoding/base64"
+	"errors"
 	"flag"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/Castux/lodge-wiki/internal/server"
@@ -21,7 +24,7 @@ import (
 
 func main() {
 	root := flag.String("root", "../lodge-data", "content repository")
-	state := flag.String("state", "", "runtime state folder (accounts, session key, image cache); default: <root>/../lodge-state")
+	state := flag.String("state", "", "disposable runtime state folder (session key, scaled-image cache); default: <root>/../lodge-state")
 	addr := flag.String("addr", "localhost:8080", "listen address")
 	title := flag.String("title", "The Chasers' Lodge", "site title")
 	public := flag.Bool("public", false, "allow reading without logging in")
@@ -54,9 +57,7 @@ func main() {
 		return
 	}
 	if !auth.HasUsers() {
-		b := make([]byte, 12)
-		rand.Read(b)
-		pw := base64.RawURLEncoding.EncodeToString(b)
+		pw := rand.Text()
 		if err := auth.SetPassword("admin", pw, server.RoleAdmin, "lodge-wiki"); err != nil {
 			log.Fatal(err)
 		}
@@ -73,6 +74,21 @@ func main() {
 	if *devAs != "" {
 		log.Printf("WARNING: --as %s: every visitor is logged in as %s. Never use this on a server.", *devAs, *devAs)
 	}
+	// Stop cleanly on Ctrl+C or a service stop: requests in progress (and
+	// the git commit they may be making) finish first, so no stale git
+	// lock is left behind.
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+	hs := &http.Server{Addr: *addr, Handler: srv, ReadHeaderTimeout: 10 * time.Second, IdleTimeout: 2 * time.Minute}
+	go func() {
+		<-ctx.Done()
+		log.Printf("shutting down")
+		sctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		hs.Shutdown(sctx)
+	}()
 	log.Printf("serving %s on http://%s", srv.Store().Root, *addr)
-	log.Fatal(http.ListenAndServe(*addr, srv))
+	if err := hs.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		log.Fatal(err)
+	}
 }

@@ -10,6 +10,8 @@ import (
 	"net/url"
 	"os"
 	"path"
+	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -47,7 +49,7 @@ func fileOf(id string) string {
 // editable (.git, _media, dot files); admin=true when only admins may
 // change it.
 func fileAccess(file string) (ok, admin bool) {
-	if file == "" || strings.Contains(file, "..") {
+	if file == "" || strings.Contains(file, "..") || strings.ContainsRune(file, '\\') || !filepath.IsLocal(filepath.FromSlash(file)) {
 		return false, false
 	}
 	for i, seg := range strings.Split(file, "/") {
@@ -200,13 +202,12 @@ func (s *Server) save(w http.ResponseWriter, r *http.Request) {
 		content = []byte(text)
 	}
 	again := func(status int, extra map[string]any) {
-		w.WriteHeader(status)
 		d := s.editData(id, text, r.FormValue("base"), true)
 		d["Summary"] = summary
 		for k, v := range extra {
 			d[k] = v
 		}
-		s.show(w, r, &View{ID: id, Title: "Editing " + file, Mode: "edit", Exists: true, Content: s.ui_("edit.html", d)})
+		s.show(w, r, &View{ID: id, Title: "Editing " + file, Mode: "edit", Exists: true, Status: status, Content: s.ui_("edit.html", d)})
 	}
 	if content != nil {
 		if msg := validate(file, content); msg != "" {
@@ -224,7 +225,7 @@ func (s *Server) save(w http.ResponseWriter, r *http.Request) {
 	}
 	before := s.store.Index().Pages[id]
 	_, err := s.store.Git.Write(file, content, r.FormValue("base"), s.user(r), msg)
-	var conflict *wiki.ErrConflict
+	var conflict *wiki.ConflictError
 	if errors.As(err, &conflict) {
 		theirs, _ := os.ReadFile(s.store.File(file))
 		again(http.StatusConflict, map[string]any{"Base": conflict.Current, "Conflict": string(theirs)})
@@ -438,7 +439,7 @@ func (s *Server) createForm(w http.ResponseWriter, r *http.Request) {
 			folders = append(folders, ns)
 		}
 	}
-	sort.Strings(folders)
+	slices.Sort(folders)
 	s.show(w, r, &View{ID: "_create", Title: "New page", Mode: "create",
 		Content: s.ui_("create.html", map[string]any{"NS": ns, "Folders": folders})})
 }

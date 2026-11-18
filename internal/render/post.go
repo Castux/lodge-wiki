@@ -237,7 +237,7 @@ func fixLink(pageID string, t *nethtml.Token, store *wiki.Store) {
 // Widths (CSS pixels) asked of the server for scaled copies (it sends
 // twice as many pixels, for sharp images on high-density screens):
 // the size presets, and a cap for images shown at the column's width.
-var presetWidths = map[string]string{"small": "200", "medium": "400"}
+var presetWidths = []struct{ class, width string }{{"small", "200"}, {"medium", "400"}} // the first that applies wins
 
 const maxImageWidth = "800"
 
@@ -281,9 +281,10 @@ func fixImage(t *nethtml.Token) {
 	}
 	if len(q) == 0 {
 		w := maxImageWidth
-		for c, pw := range presetWidths {
-			if hasClass(t, c) {
-				w = pw
+		for _, p := range presetWidths {
+			if hasClass(t, p.class) {
+				w = p.width
+				break
 			}
 		}
 		q.Set("w", w)

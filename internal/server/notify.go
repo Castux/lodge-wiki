@@ -3,14 +3,17 @@ package server
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"log"
 	"mime/multipart"
 	"net/http"
 	"net/url"
 	"os"
 	"path"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -93,7 +96,7 @@ func abstract(pg *wiki.Page) string {
 
 func (s *Server) loadNotifyConfig() (*notifyConfig, error) {
 	b, err := os.ReadFile(s.store.File(NotificationsFile))
-	if os.IsNotExist(err) {
+	if errors.Is(err, fs.ErrNotExist) {
 		return nil, nil
 	}
 	if err != nil {
@@ -142,10 +145,10 @@ func (s *Server) notify(ev pageEvent) {
 }
 
 func (h *notifyHook) matches(ev pageEvent) bool {
-	if len(h.On) > 0 && !contains(h.On, ev.Type) {
+	if len(h.On) > 0 && !slices.Contains(h.On, ev.Type) {
 		return false
 	}
-	if len(h.Namespaces) > 0 && !contains(h.Namespaces, wiki.Namespace(ev.ID)) {
+	if len(h.Namespaces) > 0 && !slices.Contains(h.Namespaces, wiki.Namespace(ev.ID)) {
 		return false
 	}
 	return h.Webhook != ""
@@ -157,15 +160,6 @@ func (h *notifyHook) color(typ string) string {
 		c = h.Color
 	}
 	return c
-}
-
-func contains(list []string, v string) bool {
-	for _, x := range list {
-		if x == v {
-			return true
-		}
-	}
-	return false
 }
 
 // fillTemplate copies the template, replacing %placeholders% in every
@@ -211,7 +205,7 @@ func fillTemplate(tpl map[string]any, ev pageEvent, base string) map[string]any 
 func sendWebhook(webhook string, payload map[string]any, image string) error {
 	u, err := url.Parse(webhook)
 	if err != nil || (u.Scheme != "https" && u.Scheme != "http") {
-		return fmt.Errorf("bad webhook address")
+		return errors.New("bad webhook address")
 	}
 	js, _ := json.Marshal(payload)
 	var body bytes.Buffer

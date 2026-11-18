@@ -20,7 +20,7 @@ import (
 // Config holds the server settings.
 type Config struct {
 	Root      string // content repository
-	State     string // runtime state: users, sessions key, image cache
+	State     string // disposable runtime state: the session key and the scaled-image cache
 	Title     string
 	Public    bool          // allow reading without logging in
 	DevUser   string        // development only: act as this account on every request
@@ -35,7 +35,7 @@ type Server struct {
 	store      *wiki.Store
 	render     *render.Renderer
 	auth       *Auth
-	mux        *http.ServeMux
+	handler    http.Handler // the routes, behind cross-origin protection
 	ui         *template.Template
 	limiter    limiter
 	loginLimit limiter
@@ -118,13 +118,16 @@ func (s *Server) routes() {
 	m.Handle("GET /_/media", s.need(RoleReader, s.mediaList))
 	m.Handle("POST /_/media", s.need(RoleEditor, s.mediaUpload))
 	m.Handle("GET /", s.need(RoleReader, s.page))
-	s.mux = m
+	// Cross-site requests (a form on another site posting here with the
+	// visitor's cookie) are refused for every method that changes
+	// something; the browser's own headers say where a request comes from.
+	s.handler = http.NewCrossOriginProtection().Handler(m)
 }
 
 // ServeHTTP implements http.Handler.
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
-	s.mux.ServeHTTP(w, r)
+	s.handler.ServeHTTP(w, r)
 	if !strings.HasPrefix(r.URL.Path, "/_media/") && !strings.HasPrefix(r.URL.Path, "/_/static/") {
 		log.Printf("%s %s (%s)", r.Method, r.URL.Path, time.Since(start).Round(time.Millisecond))
 	}
@@ -181,8 +184,7 @@ func (s *Server) page(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if errors.Is(err, fs.ErrNotExist) {
-		w.WriteHeader(http.StatusNotFound)
-		s.show(w, r, &View{ID: id, Title: wiki.Name(id), Mode: "missing",
+		s.show(w, r, &View{ID: id, Title: wiki.Name(id), Mode: "missing", Status: http.StatusNotFound,
 			Content: s.ui_("missing.html", map[string]any{"ID": id, "Path": strings.TrimPrefix(wiki.PageURL(id), "/"),
 				"CanEdit": s.can(r, RoleEditor), "Deleted": s.store.Git.Head(fileOf(id)) != ""})})
 		return

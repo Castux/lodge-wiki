@@ -2,6 +2,7 @@ package server
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io/fs"
 	"log"
@@ -11,6 +12,7 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -27,7 +29,7 @@ import (
 var (
 	linkHrefRe  = regexp.MustCompile(`(\]\(\s*<?|href=")([^)\s>"]+)`)
 	mediaURLRe  = regexp.MustCompile(`/_media/[^\s"'()?#<>\]\[]+`)
-	errNotFound = fmt.Errorf("not found")
+	errNotFound = errors.New("not found")
 )
 
 // rewriteRefs rewrites a page body:
@@ -152,7 +154,7 @@ func (s *Server) planPage(id, to string) (*movePlan, error) {
 		return nil, errNotFound
 	}
 	if to == "" || to == id || strings.HasPrefix(to, "_") {
-		return nil, fmt.Errorf("choose a new, different name")
+		return nil, errors.New("choose a new, different name")
 	}
 	if s.store.Exists(to) || exists(s.store.PageFile(to)) {
 		return nil, fmt.Errorf("a page named %s already exists", to)
@@ -171,7 +173,7 @@ func (s *Server) planPage(id, to string) (*movePlan, error) {
 // optionally the media folder of the same name.
 func (s *Server) planFolder(from, to string, withMedia bool) (*movePlan, error) {
 	if from == "" || to == "" || from == to || strings.HasPrefix(to+"/", from+"/") {
-		return nil, fmt.Errorf("choose a different folder, not inside the one being moved")
+		return nil, errors.New("choose a different folder, not inside the one being moved")
 	}
 	if exists(s.store.File(to)) {
 		return nil, fmt.Errorf("the folder %s already exists", to)
@@ -224,7 +226,7 @@ func (s *Server) planMedia(from, to string) (*movePlan, error) {
 		return nil, errNotFound
 	}
 	if to == "" || to == from || strings.HasPrefix(to+"/", from+"/") {
-		return nil, fmt.Errorf("choose a different name, not inside the folder being moved")
+		return nil, errors.New("choose a different name, not inside the folder being moved")
 	}
 	if path.Ext(from) != "" && !strings.EqualFold(path.Ext(from), path.Ext(to)) {
 		return nil, fmt.Errorf("keep the file extension (%s)", path.Ext(from))
@@ -251,18 +253,24 @@ func cleanPath(p string) string {
 	return strings.Join(segs, "/") + ext
 }
 
-// kindOf says what a repo path is: "page", "folder", "media", or "".
+// kindOf says what a repo path is: "page", "folder", "media", or "" (also
+// for paths that are not allowed: outside the repository, hidden, or in
+// admin-only folders).
 func (s *Server) kindOf(rel string) string {
-	switch {
-	case strings.HasPrefix(rel, "_media/"):
-		return "media"
-	case strings.HasSuffix(rel, ".md"):
+	if m, ok := strings.CutPrefix(rel, "_media/"); ok {
+		if ok, _ := fileAccess(m); ok {
+			return "media"
+		}
+		return ""
+	}
+	if ok, admin := fileAccess(rel); !ok || admin {
+		return ""
+	}
+	if strings.HasSuffix(rel, ".md") {
 		return "page"
 	}
-	if ok, admin := fileAccess(rel); ok && !admin {
-		if st, err := os.Stat(s.store.File(rel)); err == nil && st.IsDir() {
-			return "folder"
-		}
+	if st, err := os.Stat(s.store.File(rel)); err == nil && st.IsDir() {
+		return "folder"
 	}
 	return ""
 }
@@ -298,10 +306,7 @@ func (s *Server) mvShow(w http.ResponseWriter, r *http.Request, rel, to, errMsg 
 		}
 		data["Uses"] = len(users)
 	}
-	if status != 0 {
-		w.WriteHeader(status)
-	}
-	s.show(w, r, &View{ID: "_move", Title: "Move " + rel, Mode: "move", Content: s.ui_("mv.html", data)})
+	s.show(w, r, &View{ID: "_move", Title: "Move " + rel, Mode: "move", Status: status, Content: s.ui_("mv.html", data)})
 }
 
 // mvForm: GET /_/mv?path=<repo path>
@@ -388,7 +393,7 @@ func (s *Server) mediaRemove(w http.ResponseWriter, r *http.Request) {
 	}
 	users = append(users, s.otherMediaUsers(m)...)
 	if len(users) > 0 {
-		sort.Strings(users)
+		slices.Sort(users)
 		http.Error(w, "still used by: "+strings.Join(users, ", "), http.StatusConflict)
 		return
 	}

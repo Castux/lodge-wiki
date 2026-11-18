@@ -5,13 +5,14 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/fs"
 	"log"
 	"os"
 	"path/filepath"
-	"sort"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -62,7 +63,7 @@ func (s *Server) scanMedia(prev *MediaManifest) (*MediaManifest, error) {
 	out := &MediaManifest{Files: map[string]MediaEntry{}, Trash: map[string]MediaEntry{}}
 	err := filepath.WalkDir(root, func(fp string, d fs.DirEntry, err error) error {
 		if err != nil {
-			if os.IsNotExist(err) {
+			if errors.Is(err, fs.ErrNotExist) {
 				return nil
 			}
 			return err
@@ -76,7 +77,7 @@ func (s *Server) scanMedia(prev *MediaManifest) (*MediaManifest, error) {
 			}
 			return nil
 		}
-		if strings.HasPrefix(d.Name(), ".") || strings.HasSuffix(d.Name(), ".upload") {
+		if strings.HasPrefix(d.Name(), ".") { // hidden files, including uploads in progress
 			return nil
 		}
 		info, err := d.Info()
@@ -93,6 +94,12 @@ func (s *Server) scanMedia(prev *MediaManifest) (*MediaManifest, error) {
 		if p, ok := old[key]; ok && p.Size == e.Size && p.Modified == e.Modified && p.SHA256 != "" {
 			e.SHA256 = p.SHA256
 		} else if e.SHA256, err = fileSHA256(fp); err != nil {
+			// Unreadable for now (locked, being written): keep what the
+			// manifest knew rather than record a deletion.
+			log.Printf("media manifest: %s: %v", rel, err)
+			if p, ok := old[key]; ok {
+				target[key] = p
+			}
 			return nil
 		}
 		target[key] = e
@@ -124,7 +131,7 @@ func (m *MediaManifest) encode() []byte {
 		for k := range entries {
 			keys = append(keys, k)
 		}
-		sort.Strings(keys)
+		slices.Sort(keys)
 		for i, k := range keys {
 			kj, _ := json.Marshal(k)
 			ej, _ := json.Marshal(entries[k])

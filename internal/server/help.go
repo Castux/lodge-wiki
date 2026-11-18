@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"sort"
+	"slices"
 	"strings"
 
 	"github.com/Castux/lodge-wiki/docs"
@@ -23,7 +23,7 @@ func (s *Server) help(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) widgetDocs() string {
 	files, _ := filepath.Glob(filepath.Join(s.store.File("_widgets"), "*", "README.md"))
-	sort.Strings(files)
+	slices.Sort(files)
 	var b strings.Builder
 	for _, f := range files {
 		if text, err := os.ReadFile(f); err == nil {

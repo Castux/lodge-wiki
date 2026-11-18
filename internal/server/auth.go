@@ -143,6 +143,7 @@ func (a *Auth) HasUsers() bool {
 
 // SetPassword creates or updates an account.
 func (a *Auth) SetPassword(name, password string, role Role, author string) error {
+	name = strings.ToLower(strings.TrimSpace(name)) // as at login
 	h, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		return err
@@ -150,13 +151,23 @@ func (a *Auth) SetPassword(name, password string, role Role, author string) erro
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	msg := "accounts: add " + name
-	if u, ok := a.users[name]; ok {
-		u.Hash, u.Role, u.Since = string(h), role, time.Now().Unix()
-		msg = "accounts: new password for " + name
-	} else {
-		a.users[name] = &User{Name: name, Hash: string(h), Role: role}
+	old := a.users[name]
+	u := &User{Name: name, Hash: string(h), Role: role}
+	if old != nil {
+		c := *old // copy on write, see Update
+		c.Hash, c.Role, c.Since = string(h), role, time.Now().Unix()
+		u, msg = &c, "accounts: new password for "+name
 	}
-	return a.saveLocked(author, msg)
+	a.users[name] = u
+	if err := a.saveLocked(author, msg); err != nil {
+		if old != nil {
+			a.users[name] = old
+		} else {
+			delete(a.users, name)
+		}
+		return err
+	}
+	return nil
 }
 
 // saveLocked commits users.json; the caller holds a.mu. Messages stay
@@ -167,12 +178,20 @@ func (a *Auth) saveLocked(author, msg string) error {
 	return err
 }
 
+// dummyHash is checked against for unknown user names, so that a login
+// takes as long whether the name exists or not.
+var dummyHash, _ = bcrypt.GenerateFromPassword([]byte("not a password"), bcrypt.DefaultCost)
+
 // Check verifies a password.
 func (a *Auth) Check(name, password string) *User {
 	a.mu.RLock()
 	u := a.users[name]
 	a.mu.RUnlock()
-	if u == nil || bcrypt.CompareHashAndPassword([]byte(u.Hash), []byte(password)) != nil {
+	if u == nil {
+		bcrypt.CompareHashAndPassword(dummyHash, []byte(password))
+		return nil
+	}
+	if bcrypt.CompareHashAndPassword([]byte(u.Hash), []byte(password)) != nil {
 		return nil
 	}
 	return u
@@ -247,15 +266,13 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 	}
 	ip := clientIP(r)
 	if !s.loginLimit.allow(ip) {
-		w.WriteHeader(http.StatusTooManyRequests)
-		s.show(w, r, &View{ID: "_login", Title: "Log in", Mode: "login",
+		s.show(w, r, &View{ID: "_login", Title: "Log in", Mode: "login", Status: http.StatusTooManyRequests,
 			Content: s.ui_("login.html", map[string]any{"Next": next, "Error": "Too many failed attempts. Wait a minute and try again.", "User": r.FormValue("user")})})
 		return
 	}
 	u := s.auth.Check(strings.ToLower(strings.TrimSpace(r.FormValue("user"))), r.FormValue("password"))
 	if u == nil {
-		w.WriteHeader(http.StatusUnauthorized)
-		s.show(w, r, &View{ID: "_login", Title: "Log in", Mode: "login",
+		s.show(w, r, &View{ID: "_login", Title: "Log in", Mode: "login", Status: http.StatusUnauthorized,
 			Content: s.ui_("login.html", map[string]any{"Next": next, "Error": "Wrong user name or password.", "User": r.FormValue("user")})})
 		return
 	}

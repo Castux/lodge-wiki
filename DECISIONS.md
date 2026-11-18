@@ -92,3 +92,12 @@ look; *Superseded* marks a call replaced by a later one (kept for the record).
 - **No drag and drop in the Files view**: moving things there is rare, and a typed path is precise and rewrites links. Dropping images into the editor, where people need them, is supported.
 - **No top bar (2026-11-18)**: it only repeated the site title, which the breadcrumbs' first link already gives (the home page with both campaigns). On narrow screens "Menu ↓" sits at the right of the breadcrumbs.
 - **`deploy/setup.sh` pulls the code first and restarts itself if that changed it**, so a fix to the script applies on the run that fetched it (bash would otherwise carry on with the old script).
+- **Security review (2026-11-18)**, after a code review found real holes, now fixed and covered by `internal/server/security_test.go` (each test was checked to fail on the old code):
+  - revisions from requests must be commit hashes (`wiki.ValidRev`) and are passed after `--end-of-options`: `?rev=--output=…` made git write files;
+  - every git command runs with `GIT_LITERAL_PATHSPECS=1`: `*config/users.json` matched the private accounts file in diffs;
+  - every user-supplied path goes through `fileAccess`/`MediaPath`, which use `filepath.IsLocal`: an editor could move `_media/../../lodge-state/session.key` into the media folder and forge an admin login;
+  - writes refuse paths outside the repository, and a failed commit puts the files back;
+  - accounts are copy-on-write and the index is swapped atomically under one rebuild lock (data races, lost index updates);
+  - cross-site form posts are refused (Go's `http.CrossOriginProtection`; this is the CSRF protection, no tokens needed);
+  - git commands time out and never prompt; the server shuts down gracefully, so a restart cannot leave a stale git lock.
+- **Editors can put HTML, and so scripts, in pages** (raw HTML is allowed, as in the old wiki). Accepted: editors are the group's players, every change is a commit with their name and can be reverted. SVG files are served with a policy that stops their scripts when opened directly, and widget names are restricted to `a-z0-9-`. Revisit if editing is ever opened to strangers.

@@ -24,16 +24,24 @@ func (a *Auth) List() []User {
 	return out
 }
 
-// Update changes an account under the lock and saves.
+// Update changes a copy of an account under the lock and saves it.
+// Accounts are never changed in place: a *User handed to a request stays
+// as it was (copy on write), so readers need no lock.
 func (a *Auth) Update(name, author, msg string, fn func(u *User)) error {
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	u := a.users[name]
-	if u == nil {
+	old := a.users[name]
+	if old == nil {
 		return fmt.Errorf("no account %q", name)
 	}
-	fn(u)
-	return a.saveLocked(author, msg)
+	u := *old
+	fn(&u)
+	a.users[name] = &u
+	if err := a.saveLocked(author, msg); err != nil {
+		a.users[name] = old
+		return err
+	}
+	return nil
 }
 
 // Delete removes an account.
@@ -104,8 +112,7 @@ func (s *Server) accountSave(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	fail := func(msg string) {
-		w.WriteHeader(http.StatusBadRequest)
-		s.show(w, r, &View{ID: "_account", Title: "Your account", Mode: "account",
+		s.show(w, r, &View{ID: "_account", Title: "Your account", Mode: "account", Status: http.StatusBadRequest,
 			Content: s.ui_("account.html", map[string]any{"User": u, "Role": RoleNames[u.Role], "Error": msg})})
 	}
 	if r.FormValue("action") == "profile" {
@@ -164,10 +171,7 @@ func (s *Server) showUsers(w http.ResponseWriter, r *http.Request, msg, errMsg s
 		rows = append(rows, row{u, RoleNames[u.Role]})
 		counts[RoleNames[u.Role]]++
 	}
-	if status != http.StatusOK {
-		w.WriteHeader(status)
-	}
-	s.show(w, r, &View{ID: "_users", Title: "Users", Mode: "users",
+	s.show(w, r, &View{ID: "_users", Title: "Users", Mode: "users", Status: status,
 		Content: s.ui_("users.html", map[string]any{"Rows": rows, "Msg": msg, "Error": errMsg, "Counts": counts,
 			"Me": s.auth.User(r).Name, "Roles": []string{"pending", "reader", "editor", "admin"}})})
 }
@@ -205,7 +209,10 @@ func (s *Server) usersSave(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if rn := strings.TrimSpace(r.FormValue("realname")); rn != "" {
-			s.auth.Update(name, me, "accounts: real name of "+name, func(u *User) { u.RealName = rn })
+			if err := s.auth.Update(name, me, "accounts: real name of "+name, func(u *User) { u.RealName = rn }); err != nil {
+				fail("Account " + name + " created, but its real name could not be saved: " + err.Error())
+				return
+			}
 		}
 		done("Account " + name + " created.")
 	case "role":

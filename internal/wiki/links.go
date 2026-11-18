@@ -3,6 +3,7 @@ package wiki
 import (
 	"net/url"
 	"path"
+	"path/filepath"
 	"regexp"
 	"strings"
 )
@@ -61,16 +62,18 @@ func LinkTarget(from, href string) (id, fragment string, ok bool) {
 	return IDFromURL(p), u.Fragment, true
 }
 
-// MediaPath returns the media-relative path of a /_media/ URL, or "".
+// MediaPath returns the media-relative path of a /_media/ URL, or "" (also
+// for paths that would leave the media folder, such as "/_media/../x").
 func MediaPath(src string) string {
 	u, err := url.Parse(src)
 	if err != nil || u.Scheme != "" || u.Host != "" {
 		return ""
 	}
-	if !strings.HasPrefix(u.Path, "/_media/") {
+	p, ok := strings.CutPrefix(u.Path, "/_media/")
+	if !ok || strings.ContainsRune(p, '\\') || !filepath.IsLocal(filepath.FromSlash(p)) {
 		return ""
 	}
-	return strings.TrimPrefix(u.Path, "/_media/")
+	return p
 }
 
 // scanLinks finds internal page links and the first image of a page body.

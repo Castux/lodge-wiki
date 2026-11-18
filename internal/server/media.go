@@ -4,8 +4,8 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"image"
-	"image/gif"
 	"image/jpeg"
 	"image/png"
 	"io"
@@ -32,12 +32,18 @@ func (s *Server) media(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Forbidden", http.StatusForbidden)
 		return
 	}
-	rel := path.Clean(strings.TrimPrefix(r.URL.Path, "/"))
-	if strings.Contains(rel, "..") || !strings.HasPrefix(rel, "_media/") || strings.Contains(rel, "/.") {
+	m := wiki.MediaPath(r.URL.Path)
+	if ok, _ := fileAccess(m); !ok { // also refuses the bin (.trash)
 		http.NotFound(w, r)
 		return
 	}
+	rel := "_media/" + m
 	full := s.store.File(rel)
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	if strings.EqualFold(path.Ext(rel), ".svg") {
+		// An SVG opened on its own must not run scripts as the wiki.
+		w.Header().Set("Content-Security-Policy", "script-src 'none'; sandbox")
+	}
 	st, err := os.Stat(full)
 	if err != nil || st.IsDir() {
 		http.NotFound(w, r)
@@ -83,13 +89,27 @@ func scaleLock(key string, f func() error) error {
 	return f()
 }
 
+// maxPixels bounds the images the server decodes to scale (an RGBA copy
+// takes 4 bytes per pixel). Bigger ones are sent as they are.
+const maxPixels = 64 << 20
+
 func scale(src, dst string, w, h int) error {
 	f, err := os.Open(src)
 	if err != nil {
 		return err
 	}
+	defer f.Close()
+	cfg, _, err := image.DecodeConfig(f)
+	if err != nil {
+		return err
+	}
+	if cfg.Width <= 0 || cfg.Height <= 0 || cfg.Width*cfg.Height > maxPixels {
+		return fmt.Errorf("%s: %dx%d is not an image the server scales", src, cfg.Width, cfg.Height)
+	}
+	if _, err := f.Seek(0, io.SeekStart); err != nil {
+		return err
+	}
 	img, _, err := image.Decode(f)
-	f.Close()
 	if err != nil {
 		return err
 	}
@@ -127,8 +147,6 @@ func scale(src, dst string, w, h int) error {
 	}
 	return os.Rename(tmp, dst)
 }
-
-var _ = gif.Decode
 
 // limiter caps writes per user per minute.
 type limiter struct {
@@ -270,32 +288,45 @@ func (s *Server) mediaUpload(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	replaced := false
-	if _, err := os.Stat(full); err == nil {
-		replaced = true
-		old := s.trashPath(path.Join(ns, name))
-		if err := os.MkdirAll(filepath.Dir(old), 0o755); err == nil {
-			if err := os.Rename(full, old); err == nil {
-				log.Printf("replaced %s; previous version kept in %s", rel, old)
-			}
-		}
-	}
-	tmp := full + ".upload"
-	out, err := os.Create(tmp)
+	// Receive the whole file first (a hidden temporary file, unique per
+	// upload), and only then put the previous version in the bin and
+	// the new one in its place: a failed upload changes nothing.
+	out, err := os.CreateTemp(filepath.Dir(full), ".upload-*")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	tmp := out.Name()
 	_, err = io.Copy(out, f)
-	out.Close()
-	if err == nil {
-		err = os.Rename(tmp, full)
+	if cerr := out.Close(); err == nil {
+		err = cerr
 	}
 	if err != nil {
+		os.Remove(tmp)
+		http.Error(w, "upload failed: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	replaced := false
+	if _, err := os.Stat(full); err == nil {
+		old := s.trashPath(path.Join(ns, name))
+		err := os.MkdirAll(filepath.Dir(old), 0o755)
+		if err == nil {
+			err = os.Rename(full, old)
+		}
+		if err != nil {
+			os.Remove(tmp)
+			http.Error(w, "could not keep the previous version: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		replaced = true
+		log.Printf("replaced %s; previous version kept in %s", rel, old)
+	}
+	if err := os.Rename(tmp, full); err != nil {
 		os.Remove(tmp)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	os.Chmod(full, 0o644) // CreateTemp makes it 0600
 	log.Printf("upload %s by %s (%d bytes)", rel, s.user(r), hdr.Size)
 	verb := "upload "
 	if replaced {

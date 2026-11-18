@@ -1,11 +1,13 @@
-// Package render turns page markdown into HTML shaped like DokuWiki's
-// output (section divs, table wrappers, link classes), so the existing
-// layouts' CSS applies unchanged.
+// Package render turns page markdown into HTML: goldmark (CommonMark,
+// GFM, footnotes), then a pass over the HTML for heading ids, link
+// classes, image layout and table wrappers (post.go), and the wiki's two
+// fenced blocks, `list` and `widget`.
 package render
 
 import (
 	"bytes"
 	"html"
+	"regexp"
 	"strings"
 
 	"github.com/Castux/lodge-wiki/internal/wiki"
@@ -18,6 +20,9 @@ import (
 	"github.com/yuin/goldmark/util"
 	"gopkg.in/yaml.v3"
 )
+
+// widgetName is what a widget may be called (its folder in _widgets/).
+var widgetName = regexp.MustCompile(`^[a-z0-9][a-z0-9-]*$`)
 
 // Heading is a section heading of a rendered page.
 type Heading struct {
@@ -39,8 +44,6 @@ type Renderer struct {
 	Store *wiki.Store
 }
 
-type ctxKey struct{}
-
 type pageCtx struct {
 	r       *Renderer
 	id      string
@@ -59,8 +62,7 @@ func (r *Renderer) Render(p *wiki.Page) Result {
 		),
 	)
 	var buf bytes.Buffer
-	ctx := parser.NewContext()
-	if err := md.Convert(p.Body, &buf, parser.WithContext(ctx)); err != nil {
+	if err := md.Convert(p.Body, &buf); err != nil {
 		return Result{HTML: "<p>Render error: " + html.EscapeString(err.Error()) + "</p>"}
 	}
 	out, heads := postProcess(p.ID, buf.String(), r.Store)
@@ -77,7 +79,7 @@ func (r *Renderer) RenderSnippet(id string, body []byte) Result {
 }
 
 // blockRenderer handles fenced code blocks: `list` and `widget` blocks
-// become wiki features; everything else becomes DokuWiki-style <pre>.
+// become wiki features; everything else becomes <pre class="code">.
 type blockRenderer struct{ pc *pageCtx }
 
 func (b *blockRenderer) RegisterFuncs(reg renderer.NodeRendererFuncRegisterer) {
@@ -112,8 +114,10 @@ func (b *blockRenderer) fenced(w util.BufWriter, src []byte, n ast.Node, enterin
 		w.WriteString(b.pc.renderList(body))
 		return ast.WalkSkipChildren, nil
 	case "widget":
+		// The name becomes the widget's script and stylesheet addresses:
+		// only lowercase letters, digits and "-".
 		name := strings.TrimSpace(rest)
-		if name == "" {
+		if !widgetName.MatchString(name) {
 			break
 		}
 		var cfg map[string]any

@@ -287,24 +287,6 @@ func readChanges(metaDir string) []change {
 	return all
 }
 
-var latestCache = map[string]int64{}
-
-func latestChange(data, id string) (int64, error) {
-	if ts, ok := latestCache[id]; ok {
-		return ts, nil
-	}
-	p := filepath.Join(data, "meta", filepath.FromSlash(strings.ReplaceAll(id, ":", "/"))+".changes")
-	b, err := os.ReadFile(p)
-	if err != nil {
-		return 0, err
-	}
-	lines := strings.Split(strings.TrimSpace(string(b)), "\n")
-	f := strings.Split(lines[len(lines)-1], "\t")
-	ts, err := strconv.ParseInt(f[0], 10, 64)
-	latestCache[id] = ts
-	return ts, err
-}
-
 func readAttic(data, path string, ts int64) (string, bool) {
 	p := filepath.Join(data, "attic", filepath.FromSlash(path)+"."+strconv.FormatInt(ts, 10)+".txt.gz")
 	f, err := os.Open(p)

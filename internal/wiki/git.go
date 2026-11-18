@@ -3,10 +3,16 @@ package wiki
 import (
 	"bufio"
 	"bytes"
+	"context"
+	"errors"
 	"fmt"
+	"io/fs"
+	"maps"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -25,9 +31,27 @@ type Git struct {
 	status   SyncStatus
 }
 
+// gitTimeout bounds every git command (a fetch from an unreachable remote
+// must not hang the wiki).
+const gitTimeout = 2 * time.Minute
+
+// gitEnv makes every git command safe to run with user input and never
+// wait for a person: file arguments are literal paths, never patterns
+// (so "*config/users.json" cannot match a private file), and git and
+// ssh never prompt.
+var gitEnv = []string{"GIT_LITERAL_PATHSPECS=1", "GIT_TERMINAL_PROMPT=0"}
+
+func init() {
+	if os.Getenv("GIT_SSH_COMMAND") == "" {
+		gitEnv = append(gitEnv, "GIT_SSH_COMMAND=ssh -o BatchMode=yes")
+	}
+}
+
 func (g *Git) run(stdin []byte, env []string, args ...string) ([]byte, error) {
-	cmd := exec.Command("git", append([]string{"-C", g.Dir, "-c", "core.quotepath=off"}, args...)...)
-	cmd.Env = append(os.Environ(), env...)
+	ctx, cancel := context.WithTimeout(context.Background(), gitTimeout)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, "git", append([]string{"-C", g.Dir, "-c", "core.quotepath=off"}, args...)...)
+	cmd.Env = slices.Concat(os.Environ(), gitEnv, env)
 	if stdin != nil {
 		cmd.Stdin = bytes.NewReader(stdin)
 	}
@@ -184,9 +208,35 @@ func parseRevs(out []byte) []Revision {
 	return revs
 }
 
+// validRev matches a commit hash, full or abbreviated, optionally with
+// "^" (its parent). Revisions from requests must match it: anything else
+// could be read by git as an option ("--output=…").
+var validRev = regexp.MustCompile(`^[0-9a-f]{4,64}\^?$`)
+
+// ValidRev reports whether s is a commit hash that may be passed to git.
+func ValidRev(s string) bool { return validRev.MatchString(s) }
+
 // Show returns a file's content at a revision.
 func (g *Git) Show(rev, file string) ([]byte, error) {
-	return g.run(nil, nil, "show", rev+":"+file)
+	if !ValidRev(rev) {
+		return nil, fmt.Errorf("invalid revision %q", rev)
+	}
+	return g.run(nil, nil, "show", "--end-of-options", rev+":"+file)
+}
+
+// Info returns one commit's hash, author, time and message.
+func (g *Git) Info(rev string) (Revision, error) {
+	if !ValidRev(rev) {
+		return Revision{}, fmt.Errorf("invalid revision %q", rev)
+	}
+	out, err := g.run(nil, nil, "log", "-1", "--format=%H\x02%an\x02%at\x02%s", "--end-of-options", rev)
+	if err != nil {
+		return Revision{}, err
+	}
+	if revs := parseRevs(out); len(revs) == 1 {
+		return revs[0], nil
+	}
+	return Revision{}, fmt.Errorf("revision %q not found", rev)
 }
 
 // Head returns the hash of the last commit that touched a file ("" if none).
@@ -201,7 +251,10 @@ func (g *Git) Head(file string) string {
 // Diff returns a unified diff of a file between two revisions
 // (to == "" means the working tree).
 func (g *Git) Diff(from, to, file string) (string, error) {
-	args := []string{"diff", "--no-color", "-U3", from}
+	if !ValidRev(from) || (to != "" && !ValidRev(to)) {
+		return "", fmt.Errorf("invalid revision %q..%q", from, to)
+	}
+	args := []string{"diff", "--no-color", "-U3", "--end-of-options", from}
 	if to != "" {
 		args = append(args, to)
 	}
@@ -209,62 +262,103 @@ func (g *Git) Diff(from, to, file string) (string, error) {
 	return string(out), err
 }
 
-// ErrConflict is returned when a write was based on an outdated revision.
-type ErrConflict struct{ Current string }
+// ConflictError is returned when a write was based on an outdated revision.
+type ConflictError struct{ Current string }
 
-func (e *ErrConflict) Error() string { return "conflict: file changed since revision was loaded" }
+func (e *ConflictError) Error() string { return "conflict: file changed since revision was loaded" }
 
 // Write writes (or deletes, when content is nil) a file and commits it,
 // all under the write lock. base is the revision the edit started from;
-// if the file has changed since, ErrConflict is returned and nothing is
-// written. base == "-" skips the check.
+// if the file has changed since, ConflictError is returned and nothing is
+// written. base == "-" skips the check. It returns the file's revision.
 func (g *Git) Write(file string, content []byte, base, author, message string) (string, error) {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 
 	if base != "-" {
 		if cur := g.Head(file); cur != base {
-			return "", &ErrConflict{Current: cur}
+			return "", &ConflictError{Current: cur}
 		}
-	}
-	abs := g.Dir + string(os.PathSeparator) + strings.ReplaceAll(file, "/", string(os.PathSeparator))
-	if content == nil {
-		if err := os.Remove(abs); err != nil && !os.IsNotExist(err) {
-			return "", err
-		}
-	} else {
-		if err := os.MkdirAll(dirOf(abs), 0o755); err != nil {
-			return "", err
-		}
-		if err := os.WriteFile(abs, content, 0o644); err != nil {
-			return "", err
-		}
-	}
-	if _, err := g.run(nil, nil, "add", "-A", "--", file); err != nil {
-		return "", err
-	}
-	if out, _ := g.run(nil, nil, "status", "--porcelain", "--", file); len(bytes.TrimSpace(out)) == 0 {
-		return g.Head(file), nil // nothing changed
 	}
 	if message == "" {
 		message = "edit " + file
+	}
+	if err := g.writeLocked(map[string][]byte{file: content}, author, message); err != nil {
+		return "", err
+	}
+	return g.Head(file), nil
+}
+
+// WriteMany writes and deletes (nil content) several files in one commit,
+// under the write lock.
+func (g *Git) WriteMany(files map[string][]byte, author, message string) error {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	return g.writeLocked(files, author, message)
+}
+
+// writeLocked writes the files and commits them (nothing when nothing
+// changed). If anything fails, the files are put back as they were in
+// HEAD, so a failed write leaves nothing behind. Called with g.mu held.
+func (g *Git) writeLocked(files map[string][]byte, author, message string) (err error) {
+	paths := slices.Sorted(maps.Keys(files))
+	for _, f := range paths {
+		if !filepath.IsLocal(filepath.FromSlash(f)) {
+			return fmt.Errorf("write %q: not a path inside the repository", f)
+		}
+	}
+	defer func() {
+		if err != nil {
+			g.restore(paths)
+		}
+	}()
+	for _, f := range paths {
+		abs := filepath.Join(g.Dir, filepath.FromSlash(f))
+		if files[f] == nil {
+			if err := os.Remove(abs); err != nil && !errors.Is(err, fs.ErrNotExist) {
+				return err
+			}
+			continue
+		}
+		if err := os.MkdirAll(filepath.Dir(abs), 0o755); err != nil {
+			return err
+		}
+		if err := os.WriteFile(abs, files[f], 0o644); err != nil {
+			return err
+		}
+	}
+	if _, err := g.run(nil, nil, append([]string{"add", "-A", "--"}, paths...)...); err != nil {
+		return err
+	}
+	out, err := g.run(nil, nil, append([]string{"status", "--porcelain", "--"}, paths...)...)
+	if err != nil {
+		return err
+	}
+	if len(bytes.TrimSpace(out)) == 0 {
+		return nil // nothing changed
 	}
 	env := []string{
 		"GIT_AUTHOR_NAME=" + author, "GIT_AUTHOR_EMAIL=" + author + "@lodge.invalid",
 		"GIT_COMMITTER_NAME=lodge-wiki", "GIT_COMMITTER_EMAIL=wiki@lodge.invalid",
 	}
-	if _, err := g.run(nil, env, "commit", "-q", "-m", message, "--", file); err != nil {
-		return "", err
+	if _, err := g.run(nil, env, append([]string{"commit", "-q", "-m", message, "--"}, paths...)...); err != nil {
+		return err
 	}
 	g.syncSoon()
-	return g.Head(file), nil
+	return nil
 }
 
-func dirOf(p string) string {
-	if i := strings.LastIndexAny(p, `/\`); i >= 0 {
-		return p[:i]
+// restore puts files back as they are in HEAD (removing the ones HEAD
+// does not have), after a failed write.
+func (g *Git) restore(paths []string) {
+	g.run(nil, nil, append([]string{"reset", "-q", "--"}, paths...)...)
+	for _, f := range paths {
+		if _, err := g.run(nil, nil, "cat-file", "-e", "HEAD:"+f); err == nil {
+			g.run(nil, nil, "checkout", "-q", "HEAD", "--", f)
+		} else {
+			os.Remove(filepath.Join(g.Dir, filepath.FromSlash(f)))
+		}
 	}
-	return "."
 }
 
 // FileChange is one file touched by a commit.
@@ -321,38 +415,3 @@ func (g *Git) LogAll(since time.Time) ([]Commit, error) {
 	return res, nil
 }
 
-// WriteMany writes and deletes (nil content) several files in one commit,
-// under the write lock.
-func (g *Git) WriteMany(files map[string][]byte, author, message string) error {
-	g.mu.Lock()
-	defer g.mu.Unlock()
-	var paths []string
-	for file, content := range files {
-		abs := g.Dir + string(os.PathSeparator) + strings.ReplaceAll(file, "/", string(os.PathSeparator))
-		if content == nil {
-			if err := os.Remove(abs); err != nil && !os.IsNotExist(err) {
-				return err
-			}
-		} else {
-			if err := os.MkdirAll(dirOf(abs), 0o755); err != nil {
-				return err
-			}
-			if err := os.WriteFile(abs, content, 0o644); err != nil {
-				return err
-			}
-		}
-		paths = append(paths, file)
-	}
-	if _, err := g.run(nil, nil, append([]string{"add", "-A", "--"}, paths...)...); err != nil {
-		return err
-	}
-	env := []string{
-		"GIT_AUTHOR_NAME=" + author, "GIT_AUTHOR_EMAIL=" + author + "@lodge.invalid",
-		"GIT_COMMITTER_NAME=lodge-wiki", "GIT_COMMITTER_EMAIL=wiki@lodge.invalid",
-	}
-	_, err := g.run(nil, env, append([]string{"commit", "-q", "-m", message, "--"}, paths...)...)
-	if err == nil {
-		g.syncSoon()
-	}
-	return err
-}

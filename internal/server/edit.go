@@ -54,6 +54,10 @@ func (s *Server) revision(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	rev := r.URL.Query().Get("rev")
+	if !wiki.ValidRev(rev) {
+		http.Error(w, "invalid revision", http.StatusBadRequest)
+		return
+	}
 	raw, err := s.store.Git.Show(rev, fileOf(id))
 	if err != nil {
 		http.NotFound(w, r)
@@ -81,8 +85,8 @@ func (s *Server) diff(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	rev := r.URL.Query().Get("rev")
-	if rev == "" {
-		http.Error(w, "missing rev", http.StatusBadRequest)
+	if !wiki.ValidRev(rev) || strings.HasSuffix(rev, "^") {
+		http.Error(w, "invalid revision", http.StatusBadRequest)
 		return
 	}
 	out, err := s.store.Git.Diff(rev+"^", rev, fileOf(id))
@@ -110,13 +114,7 @@ func (s *Server) diff(w http.ResponseWriter, r *http.Request) {
 			lines = append(lines, DiffLine{"ctx", l[1:]})
 		}
 	}
-	revs, _ := s.store.Git.Log(fileOf(id), 0)
-	var info wiki.Revision
-	for _, rv := range revs {
-		if strings.HasPrefix(rv.Hash, rev) {
-			info = rv
-		}
-	}
+	info, _ := s.store.Git.Info(rev)
 	s.show(w, r, &View{ID: id, Title: "Changes to " + s.titleOr(id), Mode: "diff", Exists: s.store.Exists(id),
 		Content: s.ui_("diff.html", map[string]any{"ID": id, "URL": wiki.PageURL(id), "Path": strings.TrimPrefix(wiki.PageURL(id), "/"), "Rev": info, "Lines": lines, "CanEdit": s.can(r, RoleEditor)})})
 }
@@ -127,6 +125,10 @@ func (s *Server) revert(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	rev := r.FormValue("rev")
+	if !wiki.ValidRev(rev) {
+		http.Error(w, "invalid revision", http.StatusBadRequest)
+		return
+	}
 	raw, err := s.store.Git.Show(rev, fileOf(id))
 	if err != nil {
 		http.Error(w, "revision not found", http.StatusNotFound)
@@ -336,13 +338,10 @@ func (s *Server) index(w http.ResponseWriter, r *http.Request) {
 // outside special folders.
 func rawPath(r *http.Request) (string, bool) {
 	p := path.Clean(strings.TrimPrefix(r.URL.Path, "/_/raw/"))
-	if p == "." || strings.Contains(p, "..") {
+	// Widgets may only reach ordinary files: not admin-only folders
+	// (_layout, _widgets, _config), hidden files or anything outside.
+	if ok, admin := fileAccess(p); !ok || admin {
 		return "", false
-	}
-	for _, seg := range strings.Split(p, "/") {
-		if strings.HasPrefix(seg, "_") || strings.HasPrefix(seg, ".") {
-			return "", false
-		}
 	}
 	switch path.Ext(p) {
 	case ".md", ".json":
@@ -411,7 +410,7 @@ func (s *Server) rawPut(w http.ResponseWriter, r *http.Request) {
 	pageID := strings.TrimSuffix(p, ".md")
 	before := s.store.Index().Pages[pageID]
 	rev, err := s.store.Git.Write(p, body, base, s.user(r), msg)
-	var conflict *wiki.ErrConflict
+	var conflict *wiki.ConflictError
 	if errors.As(err, &conflict) {
 		w.Header().Set("X-Revision", conflict.Current)
 		http.Error(w, "conflict: the file changed since your revision", http.StatusConflict)

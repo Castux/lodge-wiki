@@ -22,8 +22,9 @@ var uiFS embed.FS
 type View struct {
 	ID      string
 	Title   string
-	Mode    string // show, missing, edit, history, revision, diff, search, recent, index, login, backlinks
+	Mode    string // what the page shows (show, edit, history, diff, missing, login, files...): the layout's body class
 	Exists  bool
+	Status  int // HTTP status, when not 200
 	Content template.HTML
 	TOC     template.HTML
 	Widgets []string
@@ -123,11 +124,16 @@ type cachedTpl struct {
 	t   *template.Template
 }
 
+// defaultLayout is the built-in layout, for content repos without one.
+var defaultLayout = sync.OnceValues(func() (*template.Template, error) {
+	return template.New("default-layout.html").Funcs(funcs).ParseFS(uiFS, "ui/default-layout.html")
+})
+
 func (s *Server) layoutTemplate(dir string) (*template.Template, error) {
 	file := s.store.File(dir + "/page.html")
 	st, err := os.Stat(file)
 	if err != nil {
-		return template.New("default-layout.html").Funcs(funcs).ParseFS(uiFS, "ui/default-layout.html")
+		return defaultLayout()
 	}
 	if c, ok := layoutCache.Load(file); ok && c.(cachedTpl).mod.Equal(st.ModTime()) {
 		return c.(cachedTpl).t, nil
@@ -199,13 +205,16 @@ func (s *Server) show(w http.ResponseWriter, r *http.Request, v *View) {
 	t, err := s.layoutTemplate(layoutDir)
 	if err != nil {
 		log.Printf("layout %s: %v", layoutDir, err)
-		t, _ = template.New("default-layout.html").Funcs(funcs).ParseFS(uiFS, "ui/default-layout.html")
+		t, _ = defaultLayout()
 	}
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	var b bytes.Buffer
 	if err := t.Execute(&b, v); err != nil {
 		http.Error(w, "layout error: "+err.Error(), http.StatusInternalServerError)
 		return
+	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	if v.Status != 0 && v.Status != http.StatusOK {
+		w.WriteHeader(v.Status)
 	}
 	w.Write(b.Bytes())
 }

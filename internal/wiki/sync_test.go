@@ -110,3 +110,22 @@ func TestSync(t *testing.T) {
 		t.Errorf("idle sync: %v %v", changed, err)
 	}
 }
+
+// Writes never leave the repository, and a refused write leaves nothing.
+func TestWriteOutside(t *testing.T) {
+	root := t.TempDir()
+	repo := filepath.Join(root, "repo")
+	gitT(t, root, "init", "-q", repo)
+	g := &Git{Dir: repo}
+	for _, f := range []string{"../escape.md", "/abs.md", "a/../../escape.md"} {
+		if _, err := g.Write(f, []byte("x"), "-", "t", "m"); err == nil {
+			t.Errorf("Write(%q) was accepted", f)
+		}
+	}
+	if _, err := os.Stat(filepath.Join(root, "escape.md")); err == nil {
+		t.Error("a file was written outside the repository")
+	}
+	if _, err := g.Write("ok.md", []byte("# OK\n"), "-", "t", "m"); err != nil {
+		t.Errorf("a normal write failed: %v", err)
+	}
+}
