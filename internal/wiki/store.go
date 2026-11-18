@@ -1,7 +1,6 @@
 package wiki
 
 import (
-	"bytes"
 	"errors"
 	"io/fs"
 	"os"
@@ -10,17 +9,14 @@ import (
 	"strings"
 	"sync"
 	"time"
-
-	"gopkg.in/yaml.v3"
 )
 
 // Page is a parsed page file.
 type Page struct {
 	ID    string
-	Meta  map[string]any // frontmatter
-	Body  []byte         // markdown without frontmatter
-	Raw   []byte         // the whole file
-	Title string         // frontmatter title, else first heading, else name
+	Body  []byte // the markdown
+	Raw   []byte // the whole file (the same as Body: pages have no frontmatter)
+	Title string // first heading, else the page name
 }
 
 // Store gives access to the content repository on disk.
@@ -64,41 +60,15 @@ func (s *Store) ReadPage(id string) (*Page, error) {
 	return ParsePage(id, raw), nil
 }
 
-// ParsePage splits frontmatter from body and works out the title.
+// ParsePage works out a page's title: its first heading, else its name.
 func ParsePage(id string, raw []byte) *Page {
-	p := &Page{ID: id, Raw: raw, Body: raw, Meta: map[string]any{}}
-	if bytes.HasPrefix(raw, []byte("---\n")) || bytes.HasPrefix(raw, []byte("---\r\n")) {
-		rest := raw[bytes.IndexByte(raw, '\n')+1:]
-		if end := findFrontmatterEnd(rest); end >= 0 {
-			_ = yaml.Unmarshal(rest[:end], &p.Meta)
-			body := rest[end:]
-			body = body[bytes.IndexByte(body, '\n')+1:]
-			p.Body = body
-		}
-	}
-	if t, ok := p.Meta["title"].(string); ok && t != "" {
-		p.Title = t
-	} else if h := FirstHeading(p.Body); h != "" {
+	p := &Page{ID: id, Raw: raw, Body: raw}
+	if h := FirstHeading(p.Body); h != "" {
 		p.Title = h
 	} else {
 		p.Title = Name(id)
 	}
 	return p
-}
-
-func findFrontmatterEnd(b []byte) int {
-	pos := 0
-	for pos < len(b) {
-		line := b[pos:]
-		if i := bytes.IndexByte(line, '\n'); i >= 0 {
-			line = line[:i]
-		}
-		if strings.TrimRight(string(line), "\r") == "---" {
-			return pos
-		}
-		pos += len(line) + 1
-	}
-	return -1
 }
 
 // FirstHeading returns the plain text of the first heading, if any: an
@@ -159,7 +129,6 @@ func StripInline(s string) string {
 type PageInfo struct {
 	ID       string
 	Title    string
-	Meta     map[string]any
 	Created  time.Time
 	Modified time.Time
 	Author   string // last author
@@ -226,7 +195,7 @@ func (s *Store) Reindex() error {
 			return err
 		}
 		p := ParsePage(id, raw)
-		info := &PageInfo{ID: id, Title: p.Title, Meta: p.Meta, Size: len(raw)}
+		info := &PageInfo{ID: id, Title: p.Title, Size: len(raw)}
 		info.Links, info.Image = scanLinks(id, p.Body)
 		info.Media = scanMedia(p.Body)
 		if st, err := d.Info(); err == nil {
@@ -282,7 +251,7 @@ func (s *Store) UpdateIndex(id, author string, when time.Time) {
 		delete(idx.Text, id)
 	} else {
 		p := ParsePage(id, raw)
-		info := &PageInfo{ID: id, Title: p.Title, Meta: p.Meta, Size: len(raw), Modified: when, Author: author, Created: when}
+		info := &PageInfo{ID: id, Title: p.Title, Size: len(raw), Modified: when, Author: author, Created: when}
 		info.Creator = author
 		if prev, ok := old.Pages[id]; ok && !prev.Created.IsZero() {
 			info.Created, info.Creator = prev.Created, prev.Creator

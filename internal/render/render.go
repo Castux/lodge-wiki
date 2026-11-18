@@ -65,11 +65,7 @@ func (r *Renderer) Render(p *wiki.Page) Result {
 	}
 	out, heads := postProcess(p.ID, buf.String(), r.Store)
 	res := Result{HTML: out, Headings: heads, Widgets: pc.widgets}
-	showTOC := len(heads) >= 3
-	if v, ok := p.Meta["toc"].(bool); ok {
-		showTOC = v && len(heads) > 0
-	}
-	if showTOC {
+	if len(heads) >= 3 {
 		res.TOC = buildTOC(heads)
 	}
 	return res

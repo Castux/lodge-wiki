@@ -33,7 +33,6 @@ type conv struct {
 	site        *Site
 	footnotes   []string
 	issues      map[string]bool
-	noTOC       bool
 	looseBreaks bool // treat a double backslash followed by any character as a line break
 }
 
@@ -77,10 +76,7 @@ func Convert(id, text string, site *Site) Result {
 
 	text = reMacro.ReplaceAllStringFunc(text, func(m string) string {
 		switch m {
-		case "~~NOTOC~~":
-			c.noTOC = true
-			return ""
-		case "~~NOCACHE~~":
+		case "~~NOTOC~~", "~~NOCACHE~~":
 			return ""
 		}
 		c.issue("macro %s kept as text", m)
@@ -90,9 +86,6 @@ func Convert(id, text string, site *Site) Result {
 	body := c.blocks(strings.Split(text, "\n"))
 
 	var b strings.Builder
-	if c.noTOC {
-		b.WriteString("---\ntoc: false\n---\n\n")
-	}
 	b.WriteString(body)
 	if len(c.footnotes) > 0 {
 		b.WriteString("\n")

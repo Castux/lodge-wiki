@@ -51,7 +51,7 @@ func TestConvert(t *testing.T) {
 		{"line start", "a/b", "# not a heading\n1. not a list", "\\# not a heading\n1\\. not a list\n"},
 		{"wrap", "a/b", "<WRAP noticeboard wood1>\ntext\n</WRAP>", "<div class=\"noticeboard wood1\">\n\ntext\n\n</div>\n"},
 		{"wrap span", "a/b", "<wrap badaawi>Hi</wrap>", "<span class=\"badaawi\">Hi</span>\n"},
-		{"notoc", "a/b", "~~NOTOC~~\n====== T ======", "---\ntoc: false\n---\n\n# T\n"},
+		{"notoc", "a/b", "~~NOTOC~~\n====== T ======", "# T\n"},
 		{"nspages", "foolslanding/start", "<nspages foolslanding:notice -usePictures -textPages=\"\" -sortByCreationDate>", "```list\nns: foolslanding/notice\npictures: true\nsort: created\n```\n"},
 		{"nspages default", "skarnholm/location/start", "<nspages -h1 -exclude -textPages=\"\" -nbCol=2>", "```list\nexclude: [self]\ncolumns: 2\n```\n"},
 		{"gfm table", "a/b", "^ A ^ B ^\n| 1 | **2** |", "| A | B |\n| --- | --- |\n| 1 | **2** |\n"},

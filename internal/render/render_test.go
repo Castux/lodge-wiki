@@ -55,8 +55,8 @@ func TestHeadingsAndTOC(t *testing.T) {
 	if res.TOC != want {
 		t.Errorf("TOC:\n got %s\nwant %s", res.TOC, want)
 	}
-	if res := render(t, s, "a", "---\ntoc: false\n---\n# A\n## B\n## C\n"); res.TOC != "" {
-		t.Errorf("toc: false ignored")
+	if res := render(t, s, "a", "# A\n## B\n"); res.TOC != "" {
+		t.Errorf("TOC shown with fewer than 3 headings")
 	}
 }
 

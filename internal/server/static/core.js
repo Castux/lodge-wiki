@@ -16,7 +16,7 @@
 
     let cm = null;
     const MODES = {
-      markdown: { name: "yaml-frontmatter", base: { name: "gfm", fencedCodeBlockHighlighting: true } },
+      markdown: { name: "gfm", fencedCodeBlockHighlighting: true },
       javascript: "javascript", json: { name: "javascript", json: true }, css: "css",
       html: "htmlmixed", yaml: "yaml", svg: "xml", text: null,
     };

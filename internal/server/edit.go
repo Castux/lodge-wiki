@@ -161,6 +161,19 @@ func changeType(existed, exists bool) string {
 	return "edit"
 }
 
+// deleteForm confirms deleting a page. Deleting is saving it empty (the
+// form posts to the editor), so the page's history is kept.
+func (s *Server) deleteForm(w http.ResponseWriter, r *http.Request) {
+	id := idFrom(r, "/_/delete/")
+	if !s.store.Exists(id) {
+		http.NotFound(w, r)
+		return
+	}
+	s.show(w, r, &View{ID: id, Title: "Delete " + s.titleOr(id), Mode: "delete", Exists: true,
+		Content: s.ui_("delete.html", map[string]any{"Path": strings.TrimPrefix(wiki.PageURL(id), "/"), "URL": wiki.PageURL(id),
+			"Title": s.titleOr(id), "Base": s.store.Git.Head(fileOf(id)), "Backlinks": len(s.store.Index().Backlinks[id])})})
+}
+
 func (s *Server) backlinks(w http.ResponseWriter, r *http.Request) {
 	id := idFrom(r, "/_/backlinks/")
 	idx := s.store.Index()
@@ -420,21 +433,20 @@ func (s *Server) listJSON(w http.ResponseWriter, r *http.Request) {
 	idx := s.store.Index()
 	pages, subs := idx.Children(ns)
 	type item struct {
-		ID       string         `json:"id"`
-		Title    string         `json:"title"`
-		URL      string         `json:"url"`
-		Meta     map[string]any `json:"meta,omitempty"`
-		Created  time.Time      `json:"created"`
-		Modified time.Time      `json:"modified"`
-		Author   string         `json:"author"`
-		Image    string         `json:"image,omitempty"`
+		ID       string    `json:"id"`
+		Title    string    `json:"title"`
+		URL      string    `json:"url"`
+		Created  time.Time `json:"created"`
+		Modified time.Time `json:"modified"`
+		Author   string    `json:"author"`
+		Image    string    `json:"image,omitempty"`
 	}
 	out := struct {
 		Pages      []item   `json:"pages"`
 		Namespaces []string `json:"namespaces"`
 	}{Namespaces: subs}
 	for _, p := range pages {
-		out.Pages = append(out.Pages, item{p.ID, p.Title, wiki.PageURL(p.ID), p.Meta, p.Created, p.Modified, p.Author, p.Image})
+		out.Pages = append(out.Pages, item{p.ID, p.Title, wiki.PageURL(p.ID), p.Created, p.Modified, p.Author, p.Image})
 	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(out)

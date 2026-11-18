@@ -54,8 +54,14 @@ optionally its images folder), use **Files**, open the folder and choose
 **move**. Widgets that name a data file in a moved folder (for example
 `data: skarnholm/mapdata.json`) must be updated by hand.
 
-Pages cannot be deleted from the wiki yet; ask an admin. (Moving a page
-into an `archive` folder is often enough.)
+### Deleting
+
+**Delete** in the sidebar removes the page, after asking for confirmation
+and an optional reason. Its history is kept: the page's address then says
+it was deleted and links to its history, where any old version can be
+restored. (Saving a page with all its text removed does the same.) Links
+to a deleted page show as missing; **Backlinks** lists them before you
+delete.
 
 ### History
 
@@ -265,26 +271,13 @@ otherwise the Markdown inside is not processed.
 Folders can have their own look (Skarnholm does): their style sheet may add
 other classes.
 
-### Page settings (optional)
-
-A page can start with a few settings between two `---` lines. Most pages
-need none.
-
-```yaml
----
-title: The Siege of Kobold Mound   # instead of the first heading
-toc: false                         # no table of contents (true: always one)
----
-```
-
 ### What exactly is supported
 
 For the curious: pages are [CommonMark](https://commonmark.org) with the
 [GitHub extensions](https://github.github.com/gfm/) (tables, strikethrough,
 task lists, automatic links) and footnotes. HTML is allowed anywhere.
-Nothing else is special, except the optional settings above and the two
-blocks below (`list` and `widget`), which other Markdown viewers simply
-show as code.
+Nothing else is special, except the two blocks below (`list` and
+`widget`), which other Markdown viewers simply show as code.
 
 ## Page listings
 

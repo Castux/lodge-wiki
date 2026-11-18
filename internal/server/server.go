@@ -88,6 +88,7 @@ func (s *Server) routes() {
 	m.Handle("GET /_/diff/", s.need(RoleReader, s.diff))
 	m.Handle("POST /_/revert/", s.need(RoleEditor, s.revert))
 	m.Handle("GET /_/move/", s.need(RoleEditor, s.moveForm))
+	m.Handle("GET /_/delete/", s.need(RoleEditor, s.deleteForm))
 	m.Handle("GET /_/mv", s.need(RoleEditor, s.mvForm))
 	m.Handle("POST /_/mv", s.need(RoleEditor, s.mv))
 	m.Handle("POST /_/rm", s.need(RoleEditor, s.mediaRemove))
@@ -172,7 +173,8 @@ func (s *Server) page(w http.ResponseWriter, r *http.Request) {
 	if errors.Is(err, fs.ErrNotExist) {
 		w.WriteHeader(http.StatusNotFound)
 		s.show(w, r, &View{ID: id, Title: wiki.Name(id), Mode: "missing",
-			Content: s.ui_("missing.html", map[string]any{"ID": id, "CanEdit": s.can(r, RoleEditor)})})
+			Content: s.ui_("missing.html", map[string]any{"ID": id, "Path": strings.TrimPrefix(wiki.PageURL(id), "/"),
+				"CanEdit": s.can(r, RoleEditor), "Deleted": s.store.Git.Head(fileOf(id)) != ""})})
 		return
 	}
 	if err != nil {

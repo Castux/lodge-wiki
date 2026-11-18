@@ -1,0 +1,9 @@
+<h1>Delete <a href="{{.URL}}">{{.Title}}</a></h1>
+<form method="post" action="/_/edit/{{.Path}}" class="lw-form">
+  <input type="hidden" name="text" value="">
+  <input type="hidden" name="base" value="{{.Base}}">
+  <p>The page is removed, but its history is kept: it can be restored from its history at any time, by anyone who can edit.</p>
+  {{if .Backlinks}}<p class="lw-quiet">{{.Backlinks}} page{{if ne .Backlinks 1}}s link{{else}} links{{end}} here (see <a href="/_/backlinks/{{.Path}}">backlinks</a>); those links will show as missing.</p>{{end}}
+  <label>Reason (optional) <input name="summary" size="60" style="max-width:40em" autofocus></label>
+  <button class="lw-button lw-primary">Delete the page</button> <a href="{{.URL}}" class="lw-button">Cancel</a>
+</form>

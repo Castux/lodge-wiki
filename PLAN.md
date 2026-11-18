@@ -242,7 +242,7 @@ Before going live:
 - [ ] **Media backup tool**: `lodge-wiki backup-media --from <server> --to <folder>` reading `_config/media.json`, copying missing or changed files (and the bin), then verifying hashes. Decide the transport (rsync/SFTP on the server's `_media`, or HTTP as an admin, which needs an admin-only way to fetch bin files).
 - [ ] **Security before going public**: CSRF tokens on forms; HTTP handler tests.
 - [x] **User guide**: `docs/guide.md`, served at `/_/help` (Help in the sidebar), with each widget's `_widgets/<name>/README.md`.
-- [ ] **Delete pages**: there is no way yet. A Delete action that removes the file in a commit, so it stays restorable from the history.
+- [x] **Delete pages**: Delete in the sidebar (a confirmation page; deleting is saving the page empty, so its history is kept and it can be restored).
 - [ ] **Catch up with the old wiki** before switching over: `migrate/SYNC.md`.
 
 Browsing (software and layout only, no content changes):
@@ -258,5 +258,6 @@ Later:
 - [ ] **Discord login**: needs a Discord application (client id, secret) and the public address for the redirect.
 - [ ] Empty the media bin (admins).
 - [ ] Image size and alignment from the editor's image picker.
-- [ ] **Clean up DokuWiki leftovers in the content**, once the old wiki is retired: the old help pages in `wiki/` (`syntax` (the only page using frontmatter), `dokuwiki`, `newlines`, `spoiler-tag`, `welcome`, `orphans`, `stats_script`, `notices-tech`...) and mentions of DokuWiki syntax or plugins elsewhere; point to Help instead.
-- [ ] Ideas that need content edits, once the old wiki is retired: a navigation bar per campaign (`_layout/nav.md`), "recently updated" on campaign home pages (`limit` on `list` blocks), page templates for new logs and stories, character infoboxes from frontmatter.
+- [ ] Drop the `pending` role: accounts are created by admins, there is no sign-up page.
+- [ ] **Clean up DokuWiki leftovers in the content**, once the old wiki is retired: the old help pages in `wiki/` (`syntax`, `dokuwiki`, `newlines`, `spoiler-tag`, `welcome`, `orphans`, `stats_script`, `notices-tech`...) and mentions of DokuWiki syntax or plugins elsewhere; point to Help instead.
+- [ ] Ideas that need content edits, once the old wiki is retired: a navigation bar per campaign (`_layout/nav.md`), "recently updated" on campaign home pages (`limit` on `list` blocks), page templates for new logs and stories, character infoboxes.
