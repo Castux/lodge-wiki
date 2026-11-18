@@ -4,13 +4,22 @@
 //   - promote: a landscape picture right before the "# Title" that has a
 //     size or side (so it is not shown as the banner), or one right after
 //     the title (move it before, without size or side);
+//
 //   - demote: a notice whose picture is shown as a banner (move it after
 //     the title: notices are read whole).
 //
-//	go run ./migrate/fixes/banners ../lodge-data
+//     go run ./migrate/fixes/banners ../lodge-data
+//
+// With -w it applies the second case: the picture right after the title
+// moves before it, without size or side, unless it is a notice picture or
+// would be stretched more than 1.5 times (narrower than 564 px), except for
+// sized pictures (someone chose those) and pages listed in -skip.
+//
+//	go run ./migrate/fixes/banners -w -skip foolslanding/npc/servant ../lodge-data
 package main
 
 import (
+	"flag"
 	"fmt"
 	"image"
 	_ "image/gif"
@@ -44,10 +53,18 @@ type pic struct {
 }
 
 func main() {
-	if len(os.Args) != 2 {
-		log.Fatal("usage: banners <content repo>")
+	write := flag.Bool("w", false, "move the pictures after the titles before them")
+	skipList := flag.String("skip", "", "comma-separated page ids to leave alone")
+	flag.Parse()
+	if flag.NArg() != 1 {
+		log.Fatal("usage: banners [-w] [-skip id,id] <content repo>")
 	}
-	root := os.Args[1]
+	root := flag.Arg(0)
+	skip := map[string]bool{}
+	for _, id := range strings.Split(*skipList, ",") {
+		skip[strings.TrimSpace(id)] = true
+	}
+	moved := 0
 	var promote, move, demote []string
 	filepath.WalkDir(root, func(p string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -95,6 +112,14 @@ func main() {
 					pr = "#" + pc.preset + " "
 				}
 				move = append(move, fmt.Sprintf("%s  %s %s%s", page, pc.src, pr, pc.size()))
+				if *write && !skip[id] && !strings.Contains(pc.src, "/notice/") && (pc.preset != "" || pc.w >= 564) {
+					if out, ok := moveBefore(string(b)); ok {
+						if err := os.WriteFile(p, []byte(out), 0o644); err != nil {
+							return err
+						}
+						moved++
+					}
+				}
 			}
 		}
 		return nil
@@ -105,6 +130,36 @@ func main() {
 	show("1. Before the title, landscape, but with a size or side: drop it to make the banner", promote)
 	show("2. Right after the title, landscape: move it before the title (without size or side)", move)
 	show("3. Notices shown with a banner: move the picture after the title", demote)
+	if *write {
+		fmt.Printf("\nmoved %d pictures before their titles\n", moved)
+	}
+}
+
+var reFrag = regexp.MustCompile(`(\]\(<?[^)#>\s]+)#[a-z-]+`)
+
+// moveBefore puts the page's second block (a one-line picture, right after
+// the title) before the title, without its size or side.
+func moveBefore(src string) (string, bool) {
+	lines := strings.Split(src, "\n")
+	ti := 0
+	for ti < len(lines) && strings.TrimSpace(lines[ti]) == "" {
+		ti++
+	}
+	pi := ti + 1
+	for pi < len(lines) && strings.TrimSpace(lines[pi]) == "" {
+		pi++
+	}
+	if pi >= len(lines) || (pi+1 < len(lines) && strings.TrimSpace(lines[pi+1]) != "") {
+		return "", false // not a one-line block
+	}
+	pic := reFrag.ReplaceAllString(strings.TrimSpace(lines[pi]), "$1")
+	rest := append(append([]string{}, lines[ti:pi]...), lines[pi+1:]...)
+	// the blank line that followed the picture now follows the title twice
+	out := strings.Join(append([]string{pic, ""}, rest...), "\n")
+	for strings.Contains(out, "\n\n\n") {
+		out = strings.Replace(out, "\n\n\n", "\n\n", 1)
+	}
+	return out, true
 }
 
 func show(title string, l []string) {
