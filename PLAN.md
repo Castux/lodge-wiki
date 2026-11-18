@@ -260,14 +260,15 @@ Before going live:
 - [x] **Sync with GitHub** (`--sync`): manual edits pushed to the data repo are merged within 5 minutes or on **Sync now**; on conflict the wiki's version of the file wins and admins are told.
 - [x] **Image layout**: automatic sizing, captions, galleries, `#small`/`#medium`/`#full`/`#left`/`#right` presets, picker options (see the guide).
 - [x] **Delete pages**: Delete in the sidebar (a confirmation page; deleting is saving the page empty, so its history is kept and it can be restored).
-- [ ] **Catch up with the old wiki** before switching over: `migrate/SYNC.md`.
+- [x] **Catch up with the old wiki**: not needed, the old wiki was made read-only before the switch-over (`migrate/SYNC.md` stays for reference).
+- [x] **New theme** (data repo): Lantern look with light and candlelight, a look per campaign, campaigns in the sidebar, banners, the calendar redone, the `recent` widget; the general pages rewritten for the new wiki.
 
 Browsing (software and layout only, no content changes):
 
 - [ ] **"Mentioned in"** at the bottom of each page (the backlinks, shown directly).
 - [ ] **Previous / next** between pages of a folder, in creation order (logs and stories read like a book).
-- [ ] **Sidebar readability**: body font in small caps for the small labels; Edit as a clear button.
-- [ ] **Night mode** following the device setting (a candlelit palette; colours are already variables).
+- [x] **Sidebar readability**: done with the new theme.
+- [x] **Night mode** following the device setting: the theme's candlelight, with a toggle.
 - [ ] **Image viewer**: clicking an image opens it over the page instead of a new tab.
 
 Later:
@@ -277,6 +278,7 @@ Later:
 - [ ] Drop the `pending` role: accounts are created by admins, there is no sign-up page.
 - [x] **Convert the old HTML images to markdown**: done with `migrate/fixes/imgtags` (933 images: width ≤ 250 `#small`, ≤ 500 `#medium`, > 700 `#full`, `align` left/right kept as `#left`/`#right`). Left as HTML: the Domination glyph tables, two images in an HTML block (Emir Rashad), two with a height (wiki/syntax). The floats were kept as they were; some came from DokuWiki's space-based alignment and may be accidental: fix by hand when seen.
 - [ ] **Explore: records from mostly-structured pages.** No page format change: parse the conventions pages already follow (character sheets, items, notices) into records, see how regular they are, and whether a record could drive a fixed layout for its page (or a listing) while the page stays free text. Keeps the wiki's flexibility; exceptions stay plain pages.
-- [ ] **Clean up DokuWiki leftovers in the content**, once the old wiki is retired: the old help pages in `wiki/` (`syntax`, `dokuwiki`, `newlines`, `spoiler-tag`, `welcome`, `orphans`, `stats_script`, `notices-tech`...) and mentions of DokuWiki syntax or plugins elsewhere; point to Help instead.
-- [ ] Ideas that need content edits, once the old wiki is retired: a navigation bar per campaign (`_layout/nav.md`), "recently updated" on campaign home pages (`limit` on `list` blocks), "New log" / "New story" buttons with page templates.
+- [x] **Clean up DokuWiki leftovers in the content**: old help pages deleted, the wiki section, notices guide, game setup and story template rewritten; story names unified (`yyyy-mm-dd-…`).
+- [x] A navigation per campaign (the home pages' directories, `_layout/sidebar.md` support in the core) and recent changes on the home pages (`recent` widget).
+- [ ] "New log" / "New story" buttons with page templates.
 - [ ] Section editing (an edit link per heading), and "changed since your last visit" on Recent changes.
