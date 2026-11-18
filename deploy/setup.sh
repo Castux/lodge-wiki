@@ -23,6 +23,8 @@ say()  { printf '\n\033[1m== %s\033[0m\n' "$*"; }
 note() { printf '   %s\n' "$*"; }
 warn() { printf '\033[33m!! %s\033[0m\n' "$*"; }
 die()  { printf '\033[31mxx %s\033[0m\n' "$*" >&2; exit 1; }
+# Any unexpected failure says where it happened instead of exiting silently.
+trap 'printf "\033[31mxx failed at line %s: %s\033[0m\n" "$LINENO" "$BASH_COMMAND" >&2' ERR
 
 [ "$(id -u)" -eq 0 ] || die "Run with sudo: sudo $0"
 command -v apt-get >/dev/null || die "This script expects Debian or Ubuntu (apt-get)."
