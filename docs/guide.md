@@ -263,8 +263,8 @@ with `-`, for example `#small-right`):
 
 | Word | Effect |
 | --- | --- |
-| `small` | small (about a fifth of the text's width) |
-| `medium` | medium (about half) |
+| `small` | small: 200 pixels wide |
+| `medium` | medium: 400 pixels wide (two thirds of the text) |
 | `full` | the full width of the text, however tall |
 | `right`, `left` | beside the text, on that side (at most 40% of the width unless `small` or `medium`); put the image just before the paragraph it goes with |
 
