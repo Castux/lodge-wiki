@@ -389,6 +389,186 @@ document.addEventListener("click", async ev => {
     });
   }
 
+  // The same few calls on CodeMirror and on the plain textarea, by offsets.
+  const ed = {
+    value: () => cm ? cm.getValue() : text.value,
+    sel: () => cm ? [cm.indexFromPos(cm.getCursor("from")), cm.indexFromPos(cm.getCursor("to"))] : [text.selectionStart, text.selectionEnd],
+    // replace [a, b) with s, then select [selA, selB) of the new text
+    replace(a, b, s, selA, selB) {
+      if (cm) {
+        cm.operation(() => {
+          cm.replaceRange(s, cm.posFromIndex(a), cm.posFromIndex(b), "+lwformat");
+          cm.setSelection(cm.posFromIndex(selA), cm.posFromIndex(selB));
+        });
+        cm.focus();
+      } else {
+        text.setRangeText(s, a, b);
+        text.setSelectionRange(selA, selB);
+        text.focus();
+        text.dispatchEvent(new Event("input"));
+      }
+    },
+  };
+
+  // Formatting buttons (and Ctrl+B, Ctrl+I): bold and italic wrap the
+  // selection, or a placeholder to type over, and unwrap it when it is
+  // already wrapped; headings, quotes and lists add or remove their mark at
+  // the start of the selected lines; the table button inserts a small table.
+  function wrap(mk, placeholder) {
+    const v = ed.value();
+    let [a, b] = ed.sel();
+    while (a < b && /\s/.test(v[a])) a++; // a double-clicked word brings its space
+    while (b > a && /\s/.test(v[b - 1])) b--;
+    const n = mk.length;
+    const stars = (i, d) => { let k = 0; while (v[d < 0 ? i - 1 - k : i + k] === "*") k++; return k; };
+    const marked = k => n === 1 ? k % 2 === 1 : k >= 2; // * is italic in *x* and ***x***, not in **x**
+    if (marked(stars(a, -1)) && marked(stars(b, 1))) return ed.replace(a - n, b + n, v.slice(a, b), a - n, b - n);
+    if (b - a > 2 * n && marked(stars(a, 1)) && marked(stars(b, -1))) return ed.replace(a, b, v.slice(a + n, b - n), a, b - 2 * n);
+    const inner = a === b ? placeholder : v.slice(a, b);
+    ed.replace(a, b, mk + inner + mk, a + n, a + n + inner.length);
+  }
+
+  const PREFIX = {
+    heading: { re: /^#{1,6}\s+/, add: () => "## " },
+    quote: { re: /^>\s?/, add: () => "> " },
+    list: { re: /^([-*+]|\d+[.)])\s+/, add: () => "- " },
+    numbered: { re: /^([-*+]|\d+[.)])\s+/, add: i => i + 1 + ". " },
+  };
+  function prefix(kind) {
+    const { re, add } = PREFIX[kind], v = ed.value();
+    let [a, b] = ed.sel();
+    if (b > a && v[b - 1] === "\n") b--; // a selection ending at a line's start leaves that line alone
+    const start = v.lastIndexOf("\n", a - 1) + 1;
+    let end = v.indexOf("\n", b);
+    if (end < 0) end = v.length;
+    const lines = v.slice(start, end).split("\n");
+    const own = kind === "list" ? /^[-*+]\s/ : kind === "numbered" ? /^\d+[.)]\s/ : re;
+    const used = lines.filter(l => l.trim() || lines.length === 1);
+    const off = used.every(l => own.test(l)); // all marked already: remove
+    let k = 0;
+    const out = lines.map(l => {
+      if (!l.trim() && lines.length > 1) return l;
+      const bare = l.replace(re, "");
+      return off ? bare : add(k++) + bare;
+    }).join("\n");
+    if (a === b && lines.length === 1) { // keep the cursor where it was in the text
+      const at = Math.max(start, a + out.length - (end - start));
+      return ed.replace(start, end, out, at, at);
+    }
+    ed.replace(start, end, out, start, start + out.length);
+  }
+
+  function table() {
+    const v = ed.value(), b = ed.sel()[1];
+    let at = v.indexOf("\n", b);
+    if (at < 0) at = v.length;
+    const before = v.slice(0, at), after = v.slice(at);
+    const pre = !before.trim() ? "" : before.endsWith("\n\n") ? "" : before.endsWith("\n") || !before.slice(before.lastIndexOf("\n") + 1).trim() ? "\n" : "\n\n";
+    const post = after.startsWith("\n\n") || !after.trim() ? "" : "\n";
+    const snippet = "| Column | Column |\n| ------ | ------ |\n|        |        |" + post;
+    ed.replace(at, at, pre + snippet, at + pre.length + 2, at + pre.length + 8);
+  }
+
+  const ACTIONS = {
+    bold: () => wrap("**", "bold text"), italic: () => wrap("*", "italic text"),
+    link: () => linkFinder(false), table,
+    heading: () => prefix("heading"), quote: () => prefix("quote"),
+    list: () => prefix("list"), numbered: () => prefix("numbered"),
+  };
+  form.querySelectorAll("[data-fmt]").forEach(btn => {
+    btn.addEventListener("mousedown", e => e.preventDefault()); // keep the selection
+    btn.addEventListener("click", () => ACTIONS[btn.dataset.fmt]());
+  });
+  if (cm) {
+    cm.addKeyMap({ "Ctrl-B": ACTIONS.bold, "Cmd-B": ACTIONS.bold, "Ctrl-I": ACTIONS.italic, "Cmd-I": ACTIONS.italic });
+  } else {
+    text.addEventListener("keydown", e => {
+      const act = (e.ctrlKey || e.metaKey) && !e.altKey && { b: ACTIONS.bold, i: ACTIONS.italic }[e.key.toLowerCase()];
+      if (act) { e.preventDefault(); act(); }
+    });
+  }
+
+  // Tables tidy themselves as you write: cells padded so the columns line
+  // up in the text. The table being written in waits until the cursor
+  // leaves it (padding a cell while you type in it would eat your spaces).
+  const width = s => [...s].length;
+  function cellsOf(line) {
+    let s = line.trim().slice(1);
+    if (s.endsWith("|") && !s.endsWith("\\|")) s = s.slice(0, -1);
+    return s.split(/(?<!\\)\|/).map(c => c.trim());
+  }
+  const DELIM = /^\s*\|(\s*:?-+:?\s*\|)*\s*:?-+:?\s*\|?\s*$/;
+  function tidyTable(rows, indent) {
+    const cells = rows.map(cellsOf), n = cells[0].length;
+    if (cells[1].length !== n || cells.some(r => r.length > n)) return null; // not a table, or cells GFM would drop
+    const align = cells[1].map(c => c.startsWith(":") && c.endsWith(":") ? "c" : c.endsWith(":") ? "r" : c.startsWith(":") ? "l" : "");
+    const w = align.map((_, k) => Math.max(3, ...cells.map((r, i) => i === 1 ? 0 : width(r[k] || ""))));
+    return cells.map((r, i) => indent + "| " + align.map((al, k) => {
+      if (i === 1) {
+        const dashes = "-".repeat(w[k] - (al === "c" ? 2 : al ? 1 : 0));
+        return al === "c" ? ":" + dashes + ":" : al === "l" ? ":" + dashes : al === "r" ? dashes + ":" : dashes;
+      }
+      const c = r[k] || "", pad = w[k] - width(c);
+      if (al === "r") return " ".repeat(pad) + c;
+      if (al === "c") return " ".repeat(pad >> 1) + c + " ".repeat(pad - (pad >> 1));
+      return c + " ".repeat(pad);
+    }).join(" | ") + " |");
+  }
+  // Returns the changed lines ({index: new text}) and whether the table
+  // under the cursor (line `skip`) would have changed.
+  function tidyTables(lines, skip) {
+    const changes = {};
+    let fence = null, waiting = false;
+    for (let i = 0; i < lines.length; i++) {
+      const f = lines[i].match(/^\s*(```+|~~~+)/);
+      if (f) {
+        if (!fence) fence = f[1];
+        else if (lines[i].trim().startsWith(fence)) fence = null;
+        continue;
+      }
+      if (fence || !lines[i].trim().startsWith("|") || !DELIM.test(lines[i + 1] || "")) continue;
+      let j = i + 2;
+      while (j < lines.length && lines[j].trim().startsWith("|")) j++;
+      const rows = lines.slice(i, j), tidy = tidyTable(rows, lines[i].match(/^\s*/)[0]);
+      const differs = tidy && tidy.some((l, k) => l !== rows[k]);
+      if (differs && skip >= i && skip < j) waiting = true;
+      else if (differs) tidy.forEach((l, k) => { if (l !== rows[k]) changes[i + k] = l; });
+      i = j - 1;
+    }
+    return { changes, waiting };
+  }
+  let tidyTimer = null, waiting = false;
+  function tidyNow() {
+    const v = ed.value(), lines = v.split("\n");
+    const head = cm ? cm.getCursor().line : v.slice(0, text.selectionEnd).split("\n").length - 1;
+    const res = tidyTables(lines, head);
+    waiting = res.waiting;
+    const idx = Object.keys(res.changes).map(Number);
+    if (!idx.length) return;
+    if (cm) {
+      cm.operation(() => idx.forEach(i => cm.replaceRange(res.changes[i], { line: i, ch: 0 }, { line: i, ch: lines[i].length }, "+lwtable")));
+      return;
+    }
+    let shift = 0; // the textarea: keep the selection where it was
+    idx.forEach(i => { if (i < head) shift += res.changes[i].length - lines[i].length; });
+    const [a, b] = ed.sel();
+    idx.forEach(i => { lines[i] = res.changes[i]; });
+    text.value = lines.join("\n");
+    text.setSelectionRange(a + shift, b + shift);
+    text.dispatchEvent(new Event("input"));
+  }
+  const tidySoon = () => { clearTimeout(tidyTimer); tidyTimer = setTimeout(tidyNow, 400); };
+  if (cm) {
+    cm.on("changes", (c, changes) => {
+      if (changes.some(ch => ch.origin === "undo" || ch.origin === "redo")) waiting = false; // let undo undo
+      else if (!changes.every(ch => ch.origin === "+lwtable")) tidySoon();
+    });
+    cm.on("cursorActivity", () => { if (waiting) tidySoon(); });
+  } else {
+    text.addEventListener("input", e => { if (e.isTrusted) tidySoon(); });
+    ["keyup", "click"].forEach(t => text.addEventListener(t, () => { if (waiting) tidySoon(); }));
+  }
+
   // Images (and other files) pasted or dropped into the editor are
   // uploaded to the page's media folder and inserted where they land.
   // A placeholder marks the spot while the upload runs.

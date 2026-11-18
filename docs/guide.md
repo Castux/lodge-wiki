@@ -93,6 +93,12 @@ The editor has **Write**, **Preview** and **Side by side** tabs.
 <kbd>Ctrl</kbd>+<kbd>S</kbd> saves; the summary line is optional but helps
 others in the history. On a page, <kbd>e</kbd> opens the editor.
 
+The small buttons next to the tabs write the Markdown for you, and show
+it: bold and italic (<kbd>Ctrl</kbd>+<kbd>B</kbd>, <kbd>Ctrl</kbd>+<kbd>I</kbd>)
+wrap the selected text, or unwrap it; heading, quote and lists mark the
+selected lines, or unmark them; link opens the page finder; the last one
+inserts a table.
+
 ### Text
 
 | You type | You get |
@@ -196,7 +202,8 @@ the page, whatever name you give them (`[^1]`, `[^goblins]`).
 ```
 
 The second line is required. Colons set the alignment: `:---` left,
-`:---:` centred, `---:` right. Columns do not need to line up in the text.
+`:---:` centred, `---:` right. Columns do not need to line up in the text:
+the editor lines them up by itself, once the cursor leaves the table.
 Cells hold one line of text (use `<br>` for a line break inside a cell).
 Wide tables scroll sideways on small screens.
 
