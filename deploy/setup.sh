@@ -10,7 +10,7 @@
 # itself if that changed this script), rebuilds, rewrites the service and
 # web server configuration, restarts the wiki and checks that it answers.
 # The wiki merges data changes pushed from elsewhere itself (SYNC=yes).
-set -euo pipefail
+set -eEuo pipefail  # -E: the ERR trap below also applies inside functions
 export DEBIAN_FRONTEND=noninteractive  # (sudo drops it) no apt questions or dialog warnings
 # (With pipefail, never write "cmd | grep -q": grep -q stops reading early,
 # cmd gets a broken pipe and the test fails. Capture the output first.)
