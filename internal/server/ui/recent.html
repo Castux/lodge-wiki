@@ -1,4 +1,11 @@
 <h1>Recent changes</h1>
+{{if .Admin}}{{if .Syncing}}<form method="post" action="/_/sync" class="lw-sync">
+  <span class="lw-quiet">Synced with <code>{{.Sync.Remote}}</code> {{if .Sync.Time.IsZero}}(not yet){{else}}{{ago .Sync.Time}}{{end}}{{if not .Sync.Merged.IsZero}}; last changes merged from there {{ago .Sync.Merged}}{{end}}.</span>
+  <button class="lw-button">Sync now</button>
+  {{if .Sync.Err}}<p class="lw-error">The last sync failed: {{.Sync.Err}}</p>{{end}}
+  {{if .Sync.Overridden}}<p class="lw-error">{{ago .Sync.OverriddenAt}}, changes made on <code>{{.Sync.Remote}}</code> conflicted with edits in the wiki; the wiki's version was kept for: {{range $i, $f := .Sync.Overridden}}{{if $i}}, {{end}}<code>{{$f}}</code>{{end}}. Your version is still in the history (<code>git log --full-history -p -- <i>file</i></code>): pull, redo the change on top, and push.</p>{{end}}
+</form>
+{{else}}<p class="lw-quiet">Not syncing with a remote repository (start the wiki with <code>--sync</code>).</p>{{end}}{{end}}
 <ul class="lw-recent">
 {{range $c := .Changes}}
 <li><span class="lw-quiet" title="{{date .Time}}">{{ago .Time}}</span> · <strong>{{.Author}}</strong> ·

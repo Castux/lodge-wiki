@@ -242,6 +242,7 @@ Before going live:
 - [ ] **Media backup tool**: `lodge-wiki backup-media --from <server> --to <folder>` reading `_config/media.json`, copying missing or changed files (and the bin), then verifying hashes. Decide the transport (rsync/SFTP on the server's `_media`, or HTTP as an admin, which needs an admin-only way to fetch bin files).
 - [ ] **Security before going public**: CSRF tokens on forms; HTTP handler tests.
 - [x] **User guide**: `docs/guide.md`, served at `/_/help` (Help in the sidebar), with each widget's `_widgets/<name>/README.md`.
+- [x] **Sync with GitHub** (`--sync`): manual edits pushed to the data repo are merged within 5 minutes or on **Sync now**; on conflict the wiki's version of the file wins and admins are told.
 - [x] **Image layout**: automatic sizing, captions, galleries, `#small`/`#medium`/`#full`/`#left`/`#right` presets, picker options (see the guide).
 - [x] **Delete pages**: Delete in the sidebar (a confirmation page; deleting is saving the page empty, so its history is kept and it can be restored).
 - [ ] **Catch up with the old wiki** before switching over: `migrate/SYNC.md`.

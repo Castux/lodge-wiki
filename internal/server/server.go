@@ -19,13 +19,14 @@ import (
 
 // Config holds the server settings.
 type Config struct {
-	Root    string // content repository
-	State   string // runtime state: users, sessions key, image cache
-	Title   string
-	Public  bool   // allow reading without logging in
-	DevUser string // development only: act as this account on every request
-	Notify  bool   // send notifications (otherwise they are only logged)
-	Push    bool   // push the content repo to its remote after commits
+	Root      string // content repository
+	State     string // runtime state: users, sessions key, image cache
+	Title     string
+	Public    bool          // allow reading without logging in
+	DevUser   string        // development only: act as this account on every request
+	Notify    bool          // send notifications (otherwise they are only logged)
+	Sync      bool          // sync the content repo with its upstream: merge, push (see wiki.Git.Sync)
+	SyncEvery time.Duration // how often to check the upstream for changes made elsewhere
 }
 
 // Server serves one wiki.
@@ -38,6 +39,7 @@ type Server struct {
 	ui         *template.Template
 	limiter    limiter
 	loginLimit limiter
+	syncing    bool // syncing with the upstream (--sync)
 }
 
 // New creates a server.
@@ -49,9 +51,6 @@ func New(cfg Config) (*Server, error) {
 	if err := os.MkdirAll(cfg.State, 0o755); err != nil {
 		return nil, err
 	}
-	if cfg.Push {
-		store.Git.StartPushing(log.Printf)
-	}
 	auth, err := NewAuth(cfg.State, store.Git)
 	if err != nil {
 		return nil, err
@@ -60,6 +59,15 @@ func New(cfg Config) (*Server, error) {
 	s := &Server{cfg: cfg, store: store, render: &render.Renderer{Store: store}, auth: auth, limiter: limiter{max: 30}, loginLimit: limiter{max: 8}}
 	if s.ui, err = loadUI(); err != nil {
 		return nil, err
+	}
+	if cfg.Sync {
+		if cfg.SyncEvery <= 0 {
+			cfg.SyncEvery = 5 * time.Minute
+		}
+		s.syncing = store.Git.StartSyncing(cfg.SyncEvery, log.Printf, s.merged)
+		if !s.syncing {
+			log.Printf("--sync: the content repo's branch has no upstream; not syncing")
+		}
 	}
 	s.routes()
 	return s, nil
@@ -77,6 +85,7 @@ func (s *Server) routes() {
 	m.HandleFunc("POST /_/logout", s.logout)
 	m.HandleFunc("GET /_/account", s.accountPage)
 	m.HandleFunc("POST /_/account", s.accountSave)
+	m.Handle("POST /_/sync", s.need(RoleAdmin, s.syncNow))
 	m.Handle("GET /_/users", s.need(RoleAdmin, s.usersPage))
 	m.Handle("POST /_/users", s.need(RoleAdmin, s.usersSave))
 

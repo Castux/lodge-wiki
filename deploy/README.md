@@ -30,7 +30,7 @@
 cd lodge-wiki && sudo deploy/setup.sh
 ```
 
-It pulls the latest code, rebuilds, merges content pushed to the data repo from elsewhere, rewrites the service and Caddy configuration from `lodge.conf`, restarts the wiki and checks it answers.
+It pulls the latest code, rebuilds, rewrites the service and Caddy configuration from `lodge.conf`, restarts the wiki and checks it answers.
 
 ## What it sets up
 
@@ -44,7 +44,9 @@ It pulls the latest code, rebuilds, merges content pushed to the data repo from 
 | Service (sandboxed, restarts on failure) | `/etc/systemd/system/lodge-wiki.service` |
 | HTTPS (automatic certificate) | `/etc/caddy/sites/lodge-wiki.caddy`, imported by `/etc/caddy/Caddyfile` |
 
-With `PUSH=yes` every change is pushed to the data repo a few seconds later, so GitHub always holds the pages, data, layouts and accounts. Media needs its own backup (see the to-do list in `PLAN.md`).
+With `SYNC=yes` every change is pushed to the data repo a few seconds later, so GitHub always holds the pages, data, layouts and accounts. Media needs its own backup (see the to-do list in `PLAN.md`).
+
+**Editing the data outside the wiki.** Clone the data repo anywhere, edit, commit and push to GitHub: the wiki merges it within 5 minutes (admins can press **Sync now** on Recent changes). If a file you changed was also changed in the wiki meanwhile, in a way git cannot combine, the wiki keeps its own version of that file and Recent changes tells admins which files: pull, redo your change on top, push again. Your version stays in the history (`git log --full-history -p -- <file>`). Don't edit `_config/media.json` by hand: the wiki maintains it.
 
 **Other services on the same machine.** The wiki only adds its own site file in `/etc/caddy/sites/` and one `import sites/*` line to the Caddyfile (or replaces Caddy's stock placeholder page); other sites are left as they are. The result is checked with `caddy validate` before Caddy is reloaded (not restarted), and the previous files are restored if it fails. If the wiki's local port (`LISTEN`) is taken by another program, the script stops and says so.
 

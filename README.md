@@ -35,7 +35,8 @@ Everything that matters (pages, data, layouts, widgets, accounts in `_config/use
 | `--public` | off | allow reading without logging in |
 | `--as <user>` | off | development only: act as that user on every request |
 | `--notify` | off | send the notifications in `_config/notifications.json`; without it they are only logged |
-| `--push` | off | push the content repo to its upstream remote after changes (a backup) |
+| `--sync` | off | sync the content repo with its upstream branch (GitHub): push the wiki's changes seconds after they are made, merge changes pushed there from elsewhere (on conflict the wiki's version of the file wins, and admins are told) |
+| `--sync-every` | `5m` | with `--sync`: how often to check the upstream (admins also have **Sync now** on Recent changes) |
 
 Media files (images, sounds, pdfs) are in `../lodge-data/_media/`, which is git-ignored: copy them separately when moving the wiki.
 

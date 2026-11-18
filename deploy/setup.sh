@@ -39,7 +39,7 @@ fi
 : "${BASE:=/srv/lodge}" "${LISTEN:=127.0.0.1:8080}" "${SERVICE_USER:=lodge}"
 # (not ${TITLE:=...}: bash would read the apostrophe as an opening quote)
 [ -n "${TITLE:-}" ] || TITLE="The Chasers' Lodge"
-: "${NOTIFY:=no}" "${PUSH:=yes}" "${DOMAIN:=}" "${DATA_REPO:=}"
+: "${NOTIFY:=no}" "${SYNC:=${PUSH:-yes}}" "${DOMAIN:=}" "${DATA_REPO:=}"   # (PUSH: the old name of SYNC)
 DATA="$BASE/lodge-data"
 STATE="$BASE/lodge-state"
 BIN=/usr/local/bin/lodge-wiki
@@ -145,9 +145,13 @@ if [ ! -d "$DATA/.git" ]; then
     as_svc git clone -q "$DATA_REPO" "$DATA"
     note "cloned $DATA_REPO"
   fi
+elif [ -n "$(as_svc git -C "$DATA" remote)" ] && [ "$SYNC" = yes ]; then
+  # The wiki merges changes pushed from elsewhere itself (--sync), seconds
+  # after starting and every few minutes, keeping its own version of a file
+  # on conflict, and pushes its own commits.
+  note "the wiki syncs with the remote itself (at start-up, then every 5 minutes)"
 elif [ -n "$(as_svc git -C "$DATA" remote)" ]; then
-  # Changes pushed from elsewhere (an edit made on another copy) are merged;
-  # the wiki itself pushes its own commits when PUSH=yes.
+  # SYNC=no: merge what was pushed from elsewhere now, with the wiki stopped.
   if as_svc git -C "$DATA" fetch -q; then
     BEHIND="$(as_svc git -C "$DATA" rev-list --count 'HEAD..@{u}' 2>/dev/null || echo 0)"
     if [ "$BEHIND" -gt 0 ]; then
@@ -184,7 +188,7 @@ chown -R "$SERVICE_USER": "$DATA" "$STATE"
 say "Service"
 FLAGS=(--root "$DATA" --state "$STATE" --addr "$LISTEN" --title "$TITLE")
 [ "$NOTIFY" = yes ] && FLAGS+=(--notify)
-[ "$PUSH" = yes ] && [ -n "$(as_svc git -C "$DATA" remote)" ] && FLAGS+=(--push)
+[ "$SYNC" = yes ] && [ -n "$(as_svc git -C "$DATA" remote)" ] && FLAGS+=(--sync)
 # Quote one argument for systemd's ExecStart: double quotes, with \ " escaped
 # and systemd's own % and $ doubled.
 sd_quote() {
