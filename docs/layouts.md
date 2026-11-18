@@ -102,8 +102,8 @@ A template can show them all in a loop, or pick them by name:
 
 ### Keyboard and page finder
 
-The core script gives every layout these: <kbd>/</kbd> or
-<kbd>Ctrl</kbd>+<kbd>K</kbd> opens the page finder, and so does a click on
+The core script gives every layout these: <kbd>Ctrl</kbd>+<kbd>K</kbd>
+opens the page finder, and so does a click on
 any link to `/_/search`; <kbd>e</kbd> follows the link marked
 `data-tool="edit"`, so give the Edit tool's link that attribute
 (`<a href="{{.URL}}" data-tool="{{.Name}}">`).

@@ -89,8 +89,8 @@
     window.addEventListener("beforeunload", e => { if (dirty) { e.preventDefault(); e.returnValue = ""; } });
   }
 
-  // Keyboard: "e" edits, "/" or Ctrl+K jumps to a page (when not typing;
-  // Ctrl+K in the editor inserts a link instead, see below).
+  // Keyboard: Ctrl+K jumps to a page (in the editor it inserts a link
+  // instead, see below); "e" edits (when not typing).
   document.addEventListener("keydown", e => {
     const t = e.target;
     const typing = t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.closest(".CodeMirror");
@@ -103,9 +103,6 @@
     if (e.key === "e") {
       const a = document.querySelector('a[data-tool="edit"]');
       if (a) location.href = a.href;
-    } else if (e.key === "/") {
-      e.preventDefault();
-      window.lwJump();
     }
   });
 
@@ -225,9 +222,9 @@ document.addEventListener("click", async ev => {
   }
 });
 
-// Page finder: fuzzy search on page titles and addresses. Opened by "/"
-// or Ctrl+K to jump to a page, and in the editor by "[[" or Ctrl+K to
-// insert a link (standard markdown, the page's address).
+// Page finder: fuzzy search on page titles and addresses. Ctrl+K opens it
+// to jump to a page, and in the editor to insert a link (standard
+// markdown, the page's address).
 (function () {
   "use strict";
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
@@ -336,7 +333,7 @@ document.addEventListener("click", async ev => {
   });
 
   // Editor: insert a link to a page, with the selected text (if any) as
-  // the link's text; "[[" opens it too (and is replaced by the link).
+  // the link's text (Ctrl+K, or the link button).
   const form = document.querySelector(".lw-editor");
   const text = form && form.querySelector(".lw-text");
   if (!form || !text || form.classList.contains("lw-file") || text.readOnly) return;
@@ -345,19 +342,10 @@ document.addEventListener("click", async ev => {
   const folder = m ? m[1] : "";
   const slug = s => fold(s).replace(/[^a-z0-9._]+/g, "-").replace(/^[-._]+|[-._]+$/g, "");
 
-  function linkFinder(dropBrackets) {
+  function linkFinder() {
     const selected = cm ? cm.getSelection() : text.value.slice(text.selectionStart, text.selectionEnd);
     const done = () => { if (cm) cm.focus(); else text.focus(); };
     const insert = (label, url) => {
-      if (dropBrackets) { // remove the "[[" just typed
-        if (cm) {
-          const c = cm.getCursor();
-          cm.replaceRange("", { line: c.line, ch: c.ch - 2 }, c);
-        } else {
-          const p = text.selectionStart;
-          text.setRangeText("", p - 2, p, "end");
-        }
-      }
       window.lwInsert("[" + (selected || label).replace(/[\[\]]/g, "") + "](" + url + ")");
       done();
     };
@@ -373,19 +361,10 @@ document.addEventListener("click", async ev => {
   }
 
   if (cm) {
-    cm.addKeyMap({ "Ctrl-K": () => linkFinder(false), "Cmd-K": () => linkFinder(false) });
-    cm.on("inputRead", (c, change) => {
-      if (change.text.join("") !== "[") return;
-      const cur = c.getCursor();
-      if (c.getRange({ line: cur.line, ch: cur.ch - 2 }, cur) === "[[") linkFinder(true);
-    });
+    cm.addKeyMap({ "Ctrl-K": linkFinder, "Cmd-K": linkFinder });
   } else {
     text.addEventListener("keydown", e => {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") { e.preventDefault(); linkFinder(false); }
-    });
-    text.addEventListener("input", e => {
-      const p = text.selectionStart;
-      if (e.data === "[" && text.value.slice(p - 2, p) === "[[") linkFinder(true);
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") { e.preventDefault(); linkFinder(); }
     });
   }
 
@@ -482,7 +461,7 @@ document.addEventListener("click", async ev => {
 
   const ACTIONS = {
     bold: () => wrap("**", "bold text"), italic: () => wrap("*", "italic text"),
-    link: () => linkFinder(false), table,
+    link: linkFinder, table,
     heading, quote: () => prefix("quote"),
     list: () => prefix("list"), numbered: () => prefix("numbered"),
   };

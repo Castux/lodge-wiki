@@ -76,7 +76,7 @@ reload, and merge by hand.
 
 ### Finding your way
 
-- **Search**: click it, or press <kbd>/</kbd> or <kbd>Ctrl</kbd>+<kbd>K</kbd>,
+- **Search**: click it, or press <kbd>Ctrl</kbd>+<kbd>K</kbd>,
   and type a few letters of a page's title (in any order of words, letters
   can be skipped: `drgn rst` finds Dragon's Rest); <kbd>Enter</kbd> opens
   it. The last line searches the text of all pages instead.
@@ -145,8 +145,8 @@ get a table of contents in the sidebar. Every heading can be linked to with
 <https://example.com>
 ```
 
-The simplest way, in the editor: type `[[` (or press
-<kbd>Ctrl</kbd>+<kbd>K</kbd>), type a few letters of the page's title and
+The simplest way, in the editor: press <kbd>Ctrl</kbd>+<kbd>K</kbd> (or the
+link button), type a few letters of the page's title and
 press <kbd>Enter</kbd>: the link is written for you. If some text is
 selected when you press <kbd>Ctrl</kbd>+<kbd>K</kbd>, it becomes the link's
 text. The last line, **New page**, links to a page that does not exist yet

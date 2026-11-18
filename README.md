@@ -12,7 +12,7 @@ it is specific to that.
   the person who made it: page history, diffs, restoring old versions, a
   recent-changes list. Concurrent edits are never silently overwritten.
 - **Writing.** An editor with syntax highlighting, live preview, a few
-  formatting buttons, a fuzzy page finder for links (`[[` or Ctrl+K),
+  formatting buttons, a fuzzy page finder for links (Ctrl+K),
   images pasted or dropped straight in, tables that line themselves up.
 - **Organising.** Folders with front pages, renames and moves that update
   every link, backlinks, page listings that stay up to date (`list`
