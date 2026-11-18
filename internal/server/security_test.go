@@ -315,23 +315,31 @@ func TestTinkerer(t *testing.T) {
 	}
 }
 
-// The running version is shown to admins only, with newer commits if known.
-func TestVersion(t *testing.T) {
+// The Admin page, with the running version and newer commits, is for admins only.
+func TestAdminPage(t *testing.T) {
 	srv, root, _ := testWiki(t, "editor")
-	srv.cfg.Version = "0123456789abcdef0123456789abcdef01234567 2026-11-18"
-	if strings.Contains(do(srv, "GET", "/start", nil, nil).Body.String(), "lodge-wiki 0123456") {
-		t.Error("an editor sees the version")
+	if w := do(srv, "GET", "/_/admin", nil, nil); w.Code != http.StatusForbidden {
+		t.Errorf("an editor on the Admin page: status %d", w.Code)
+	}
+	if strings.Contains(do(srv, "GET", "/start", nil, nil).Body.String(), `href="/_/admin"`) {
+		t.Error("an editor has the Admin link")
 	}
 	os.WriteFile(filepath.Join(root, "_config", "users.json"), []byte(`{"boss": {"hash": "$2a$10$secrethashsecrethashsecrethashsecrethashsecrethashsec", "role": 4}}`), 0o644)
-	srv, err := New(Config{Root: root, State: t.TempDir(), Title: "t", DevUser: "boss", Version: srv.cfg.Version})
+	srv, err := New(Config{Root: root, State: t.TempDir(), Title: "t", DevUser: "boss", Version: "0123456789abcdef0123456789abcdef01234567 2026-11-18"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	srv.newer.Store(3)
-	body := do(srv, "GET", "/start", nil, nil).Body.String()
-	for _, want := range []string{"lodge-wiki 0123456, 2026-11-18", "3 new", "/compare/0123456789abcdef0123456789abcdef01234567...main"} {
+	if !strings.Contains(do(srv, "GET", "/start", nil, nil).Body.String(), `href="/_/admin"`) {
+		t.Error("an admin lacks the Admin link")
+	}
+	body := do(srv, "GET", "/_/admin", nil, nil).Body.String()
+	for _, want := range []string{"lodge-wiki 0123456</a>, 2026-11-18", "not known yet", `href="/_/backup"`, `href="/_/users"`} {
 		if !strings.Contains(body, want) {
-			t.Errorf("admin page lacks %q", want)
+			t.Errorf("Admin page lacks %q", want)
 		}
+	}
+	srv.newer.Store(3)
+	if body := do(srv, "GET", "/_/admin", nil, nil).Body.String(); !strings.Contains(body, "3 newer commits</a>") || !strings.Contains(body, "/compare/0123456789abcdef0123456789abcdef01234567...main") {
+		t.Error("Admin page lacks the newer commits")
 	}
 }

@@ -1,0 +1,30 @@
+<h1>Admin</h1>
+
+<h2>Accounts</h2>
+<p>{{.Users}} accounts{{with .Roles}}: {{.}}{{end}}. <a href="/_/users" class="lw-button">Manage accounts</a></p>
+
+<h2>Syncing</h2>
+{{if .Syncing}}<form method="post" action="/_/sync" class="lw-sync">
+  <p>Synced with <code>{{.Sync.Remote}}</code> {{if .Sync.Time.IsZero}}(not yet){{else}}{{ago .Sync.Time}}{{end}}{{if not .Sync.Merged.IsZero}}; changes last came in from there {{ago .Sync.Merged}}{{end}}.
+  <button class="lw-button">Sync now</button></p>
+  {{if .Sync.Err}}<p class="lw-error">The last sync failed: {{.Sync.Err}}</p>{{end}}
+  {{if .Sync.Overridden}}<p class="lw-error">{{ago .Sync.OverriddenAt}}, changes made on <code>{{.Sync.Remote}}</code> conflicted with edits in the wiki; the wiki's version was kept for: {{range $i, $f := .Sync.Overridden}}{{if $i}}, {{end}}<code>{{$f}}</code>{{end}}. The other version is still in the history (<code>git log --full-history -p -- <i>file</i></code>): pull, redo the change on top, and push.</p>{{end}}
+</form>
+{{else}}<p class="lw-quiet">Not syncing with a remote repository (start the wiki with <code>--sync</code>).</p>{{end}}
+
+<h2>Backup</h2>
+<p><a href="/_/backup" class="lw-button">Download a backup</a></p>
+<p class="lw-quiet">Everything in one zip, to keep or to move the wiki elsewhere: the pages and their whole history, the settings and accounts, and every uploaded file (so it is large). Keep it private: it holds the accounts and the notification webhooks.</p>
+
+<h2>The wiki</h2>
+<table class="lw-history lw-admin">
+  <tbody>
+  <tr><td>Version</td><td>{{if .Commit}}{{if .Checkable}}<a href="https://github.com/{{.Repo}}/commit/{{.Commit}}">lodge-wiki {{.Short}}</a>{{else}}lodge-wiki {{.Short}}{{end}}{{with .Date}}, {{.}}{{end}}{{else}}unknown (built without version information){{end}}</td></tr>
+  {{if .Checkable}}<tr><td>Updates</td><td>{{if gt .Newer 0}}<a href="https://github.com/{{.Repo}}/compare/{{.Commit}}...main">{{.Newer}} newer commit{{if gt .Newer 1}}s{{end}}</a> on GitHub: whoever runs the server can update it (<code>deploy/setup.sh</code>){{else if eq .Newer 0}}up to date{{else}}not known yet (GitHub is asked every 6 hours, and only answers for a public repository){{end}}</td></tr>{{end}}
+  <tr><td>Running since</td><td>{{date .Started}} ({{ago .Started}})</td></tr>
+  <tr><td>Pages</td><td>{{.Pages}}</td></tr>
+  <tr><td>Uploaded files</td><td>{{.Media}} ({{size .MediaSize}}){{if .Trash}}; {{.Trash}} in the bin ({{size .TrashSize}}){{end}}</td></tr>
+  <tr><td>Memory</td><td>{{size .Memory}}</td></tr>
+  <tr><td>Go</td><td>{{.Go}}</td></tr>
+  </tbody>
+</table>

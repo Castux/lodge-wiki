@@ -56,7 +56,7 @@ logins).
 | tinkerer | also change layouts and widgets |
 | admin | also accounts, `_config`, syncing, backups |
 
-Admins create accounts on the Users page. **Editors can put HTML, and so
+Admins create accounts from the Admin page. **Editors can put HTML, and so
 scripts, in pages**, as in most wikis of this kind: give editing rights to
 people you trust. Every change is a commit with their name, and can be
 undone.
@@ -66,12 +66,12 @@ undone.
 With `--sync`, the wiki keeps its repository in step with its upstream
 branch (usually a private GitHub repository): it pushes its own commits
 seconds after they are made, and merges commits pushed there from
-elsewhere every few minutes (admins also have **Sync now** on Recent
-changes). So the content can be edited with any editor and pushed.
+elsewhere every few minutes (admins also have **Sync now** on the Admin
+page). So the content can be edited with any editor and pushed.
 
 If the same file was changed on both sides in a way git cannot combine,
-the wiki keeps its own version of that file, and Recent changes tells
-admins which ones. The other version stays in the history, as the merge's
+the wiki keeps its own version of that file, and the Admin page tells
+admins which ones (Recent changes points them there). The other version stays in the history, as the merge's
 second parent.
 
 ## Notifications
@@ -116,7 +116,7 @@ addresses are secrets: `_config` is only visible to admins.
 
 ## Backups
 
-- **One click:** admins have **Download a backup** on Recent changes: a zip
+- **One click:** admins have **Download a backup** on the Admin page: a zip
   with every file, the uploaded files, the whole history as a git bundle,
   and instructions to run the wiki again from it. It is written while it
   downloads.
@@ -128,6 +128,14 @@ addresses are secrets: `_config` is only visible to admins.
   copy the files it lacks (from `_media/` on disk, or over HTTP as an
   admin at `/_media/<path>`) and check the hashes.
 - **The state folder:** nothing to back up.
+
+## The Admin page
+
+Admins have **Admin** in the sidebar: the accounts, syncing (its status,
+conflicts, **Sync now**), the backup download, and the wiki's version and
+health (uptime, pages, uploaded files, memory). With a build that knows
+its commit (`deploy/setup.sh` stamps it in, a plain `go build` too), it
+also says how many newer commits the code's repository has on GitHub.
 
 ## Deploying
 

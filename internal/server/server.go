@@ -42,7 +42,7 @@ type Server struct {
 	limiter    limiter
 	loginLimit limiter
 	syncing    bool         // syncing with the upstream (--sync)
-	newer      atomic.Int64 // commits on the code's main branch that this build lacks
+	newer      atomic.Int64 // commits on the code's main branch that this build lacks; -1: not known
 }
 
 // New creates a server.
@@ -72,6 +72,7 @@ func New(cfg Config) (*Server, error) {
 			log.Printf("--sync: the content repo's branch has no upstream; not syncing")
 		}
 	}
+	s.newer.Store(-1) // not known yet
 	if s.cfg.Version == "" {
 		s.cfg.Version = buildVersion()
 	}
@@ -93,6 +94,7 @@ func (s *Server) routes() {
 	m.HandleFunc("POST /_/account", s.accountSave)
 	m.Handle("POST /_/sync", s.need(RoleAdmin, s.syncNow))
 	m.Handle("GET /_/backup", s.need(RoleAdmin, s.backup))
+	m.Handle("GET /_/admin", s.need(RoleAdmin, s.adminPage))
 	m.Handle("GET /_/users", s.need(RoleAdmin, s.usersPage))
 	m.Handle("POST /_/users", s.need(RoleAdmin, s.usersSave))
 

@@ -31,7 +31,7 @@ NOTIFY=no
 # Sync with DATA_REPO (yes/no): every change made in the wiki is pushed there
 # seconds later (GitHub then always holds a copy), and changes pushed there
 # from elsewhere (manual edits) are merged into the wiki within 5 minutes,
-# or at once with "Sync now" on Recent changes. If a file was changed on
+# or at once with "Sync now" on the Admin page. If a file was changed on
 # both sides, the wiki's version wins; admins are told which files.
 SYNC=yes
 

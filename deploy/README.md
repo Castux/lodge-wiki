@@ -35,7 +35,7 @@
 cd lodge-wiki && sudo deploy/setup.sh
 ```
 
-It pulls the latest code, rebuilds, rewrites the service and Caddy configuration from `lodge.conf`, restarts the wiki and checks it answers. Admins see the running version at the bottom of the wiki's sidebar, with the number of newer commits on GitHub once the repository is public.
+It pulls the latest code, rebuilds, rewrites the service and Caddy configuration from `lodge.conf`, restarts the wiki and checks it answers. Admins see the running version on the wiki's Admin page, with the number of newer commits on GitHub.
 
 ## What it sets up
 
@@ -51,7 +51,7 @@ It pulls the latest code, rebuilds, rewrites the service and Caddy configuration
 
 With `SYNC=yes` every change is pushed to the data repo a few seconds later, so GitHub always holds the pages, data, layouts and accounts. Uploaded files need their own backup: see Backups below.
 
-**Editing the data outside the wiki.** Clone the data repo anywhere, edit, commit and push to GitHub: the wiki merges it within 5 minutes (admins can press **Sync now** on Recent changes). If a file you changed was also changed in the wiki meanwhile, in a way git cannot combine, the wiki keeps its own version of that file and Recent changes tells admins which files: pull, redo your change on top, push again. Your version stays in the history (`git log --full-history -p -- <file>`). Don't edit `_config/media.json` by hand: the wiki maintains it.
+**Editing the data outside the wiki.** Clone the data repo anywhere, edit, commit and push to GitHub: the wiki merges it within 5 minutes (admins can press **Sync now** on the Admin page). If a file you changed was also changed in the wiki meanwhile, in a way git cannot combine, the wiki keeps its own version of that file and the Admin page tells admins which files: pull, redo your change on top, push again. Your version stays in the history (`git log --full-history -p -- <file>`). Don't edit `_config/media.json` by hand: the wiki maintains it.
 
 **Other services on the same machine.** The wiki only adds its own site file in `/etc/caddy/sites/` and one `import sites/*` line to the Caddyfile (or replaces Caddy's stock placeholder page); other sites are left as they are. The result is checked with `caddy validate` before Caddy is reloaded (not restarted), and the previous files are restored if it fails. If the wiki's local port (`LISTEN`) is taken by another program, the script stops and says so.
 
@@ -61,7 +61,7 @@ Useful commands: `journalctl -u lodge-wiki -f` (logs), `sudo systemctl restart l
 
 Pages and their history are on GitHub (the data repo), but uploaded files are not in git: they live only on the server.
 
-**One click:** admins have **Download a backup** on Recent changes. It gives one zip with everything needed to run the wiki elsewhere, without access to the server: every file (pages, settings, accounts, uploaded files and the bin), the whole history as a git bundle, and a `README.txt` saying how to restore it (`git clone` the bundle, copy the media into it, run lodge-wiki on it). Keep it private: it holds the accounts and the Discord webhooks.
+**One click:** admins have **Download a backup** on the Admin page. It gives one zip with everything needed to run the wiki elsewhere, without access to the server: every file (pages, settings, accounts, uploaded files and the bin), the whole history as a git bundle, and a `README.txt` saying how to restore it (`git clone` the bundle, copy the media into it, run lodge-wiki on it). Keep it private: it holds the accounts and the Discord webhooks.
 
 **Regularly, from a machine you control** (pulling, so the server holds no keys to it):
 

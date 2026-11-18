@@ -431,14 +431,12 @@ backed up and restored. Uploaded files are stored next to it, not in git.
   `README.md`, the documentation shown above) defines a widget.
 - `_config/` holds the accounts, notification rules and the list of
   uploaded files. Only admins can see it.
-- Admins see the wiki program's version at the bottom of the sidebar; a
-  "3 new" next to it means newer code is on GitHub (whoever runs the server
-  updates it, see `deploy/README.md`).
-- **Download a backup** (admins, on Recent changes) gives everything in
-  one zip: every file, the uploaded files, the history, and how to run the
-  wiki again from it.
+- **Admin** in the sidebar (admins) gathers the accounts, syncing, the
+  backup and the wiki's version and health. **Download a backup** there
+  gives everything in one zip: every file, the uploaded files, the
+  history, and how to run the wiki again from it.
 - The repository can be edited outside the wiki: changes pushed to its
   GitHub copy are merged within a few minutes (or at once with **Sync
-  now** on Recent changes). If a file was also changed in the wiki in the
-  meantime, the wiki keeps its own version of that file, and Recent
-  changes says which ones; the other version stays in the history.
+  now** on the Admin page). If a file was also changed in the wiki in the
+  meantime, the wiki keeps its own version of that file, and the Admin
+  page says which ones; the other version stays in the history.

@@ -212,7 +212,7 @@ func (s *Server) recent(w http.ResponseWriter, r *http.Request) {
 	}
 	s.show(w, r, &View{ID: "_recent", Title: "Recent changes", Mode: "recent",
 		Content: s.ui_("recent.html", map[string]any{"Changes": changes, "Store": s.store,
-			"Admin": s.can(r, RoleAdmin), "Syncing": s.syncing, "Sync": s.store.Git.SyncStatus()})})
+			"Alert": s.can(r, RoleAdmin) && s.syncAlert()})})
 }
 
 // SearchHit is a search result.

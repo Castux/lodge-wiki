@@ -20,7 +20,7 @@ func (s *Server) merged(files []string) {
 	}
 }
 
-// syncNow is the admins' "Sync now" button (on Recent changes).
+// syncNow is the admins' "Sync now" button (on the Admin page).
 func (s *Server) syncNow(w http.ResponseWriter, r *http.Request) {
 	if !s.syncing {
 		http.Error(w, "syncing is off (start the wiki with --sync, on a branch with an upstream)", http.StatusBadRequest)
@@ -29,5 +29,5 @@ func (s *Server) syncNow(w http.ResponseWriter, r *http.Request) {
 	if changed, _ := s.store.Git.SyncLogged(log.Printf); len(changed) > 0 {
 		s.merged(changed)
 	}
-	http.Redirect(w, r, "/_/recent", http.StatusSeeOther)
+	http.Redirect(w, r, "/_/admin", http.StatusSeeOther)
 }

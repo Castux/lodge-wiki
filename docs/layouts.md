@@ -54,7 +54,7 @@ A template must output `{{.Head}}` in the `<head>`, `{{.Scripts}}` before
 | `.SiteTitle` | the site's name (`--title`) |
 | `.ID` | the page's id (`stories/the-siege`); special pages start with `_` |
 | `.URL` | the page's address |
-| `.Mode` | what is shown: `show` (a page), `missing`, `edit`, `history`, `revision`, `diff`, `move`, `delete`, `backlinks`, `create`, `search`, `index`, `recent`, `files`, `help`, `login`, `account`, `users`. Handy as a class: `<body class="mode-{{.Mode}}">` |
+| `.Mode` | what is shown: `show` (a page), `missing`, `edit`, `history`, `revision`, `diff`, `move`, `delete`, `backlinks`, `create`, `search`, `index`, `recent`, `files`, `help`, `login`, `account`, `admin`, `users`. Handy as a class: `<body class="mode-{{.Mode}}">` |
 | `.Exists` | whether the page exists |
 | `.Content` | the main content, as HTML: the page, the editor, a history list... |
 | `.TOC` | the table of contents (`<nav class="toc">`), for pages with three headings or more; empty otherwise |
@@ -73,8 +73,8 @@ A template must output `{{.Head}}` in the `<head>`, `{{.Scripts}}` before
 ### Tools
 
 Each tool has `.Name`, `.Label`, `.URL`, `.Active` (it is the current
-view), `.Post` (it must be a form posting to `.URL`: the logout) and
-`.Badge` (a short note to show beside it, or empty). The list only holds
+view) and `.Post` (it must be a form posting to `.URL`: the logout). The
+list only holds
 what this person may do, in this order:
 
 | Name | Label |
@@ -82,8 +82,7 @@ what this person may do, in this order:
 | `edit` | Edit, or Create on a missing page |
 | `history`, `move`, `delete`, `backlinks` | the page's History, Rename, Delete, Backlinks |
 | `recent`, `create`, `files`, `help` | Recent changes, New page, Files, Help |
-| `account`, `users`, `logout` / `login` | the account entries |
-| `version` | for admins: the running version; its badge counts newer commits on GitHub |
+| `account`, `admin`, `logout` / `login` | Your account, Admin (for admins), Log out or Log in |
 
 A template can show them all in a loop, or pick them by name:
 
