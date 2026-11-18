@@ -107,7 +107,9 @@ others in the history. On a page, <kbd>e</kbd> opens the editor.
 
 **Paragraphs** are separated by a blank line. A single line break inside a
 paragraph is ignored (the lines join up). To force a line break, end the
-line with a backslash `\` (or two spaces).
+line with a backslash `\` (or two spaces). That is only for special cases,
+like the lines of a poem or an address: for separate ideas, use separate
+paragraphs, and for a series of short items, a list.
 
 To show a character that Markdown would otherwise use (`*`, `_`, `#`,
 `[`...), put a backslash before it: `\*not italic\*`.
