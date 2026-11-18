@@ -113,6 +113,7 @@ func (s *Server) routes() {
 	m.Handle("GET /_/raw/", s.need(RoleReader, s.rawGet))
 	m.Handle("PUT /_/raw/", s.need(RoleEditor, s.rawPut))
 	m.Handle("GET /_/list", s.need(RoleReader, s.listJSON))
+	m.Handle("GET /_/titles", s.need(RoleReader, s.titles))
 	m.Handle("GET /_/log", s.need(RoleReader, s.logJSON))
 	m.Handle("GET /_/media", s.need(RoleReader, s.mediaList))
 	m.Handle("POST /_/media", s.need(RoleEditor, s.mediaUpload))

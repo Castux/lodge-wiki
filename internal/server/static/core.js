@@ -46,6 +46,7 @@
       cm.on("change", () => { cm.save(); text.dispatchEvent(new Event("input")); });
       cm.focus();
     }
+    window.lwCM = cm; // for the link finder and image pasting below
     window.lwInsert = snippet => {
       if (cm) { cm.replaceSelection(snippet); cm.focus(); return; }
       text.setRangeText(snippet, text.selectionStart, text.selectionEnd, "end");
@@ -88,17 +89,23 @@
     window.addEventListener("beforeunload", e => { if (dirty) { e.preventDefault(); e.returnValue = ""; } });
   }
 
-  // Keyboard: "e" edits, "/" searches (when not typing).
+  // Keyboard: "e" edits, "/" or Ctrl+K jumps to a page (when not typing;
+  // Ctrl+K in the editor inserts a link instead, see below).
   document.addEventListener("keydown", e => {
     const t = e.target;
-    if (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || e.ctrlKey || e.metaKey || e.altKey) return;
+    const typing = t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.closest(".CodeMirror");
+    if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && e.key.toLowerCase() === "k" && !document.querySelector(".lw-editor")) {
+      e.preventDefault();
+      window.lwJump();
+      return;
+    }
+    if (typing || e.ctrlKey || e.metaKey || e.altKey) return;
     if (e.key === "e") {
       const a = document.querySelector('a[data-tool="edit"]');
       if (a) location.href = a.href;
     } else if (e.key === "/") {
-      const q = document.querySelector('input[name="q"]');
       e.preventDefault();
-      if (q) q.focus(); else location.href = "/_/search";
+      window.lwJump();
     }
   });
 })();
@@ -120,17 +127,7 @@
   const sizeSel = box.querySelector(".lw-media-size");
   const sideSel = box.querySelector(".lw-media-side");
   const caption = box.querySelector(".lw-media-caption");
-  function insert(file) {
-    if (!file.image) {
-      window.lwInsert(`[${file.name}](${file.url})`);
-      return;
-    }
-    const alt = file.name.replace(/\.[^.]+$/, "").replace(/[-_]/g, " ");
-    const preset = [sizeSel.value, sideSel.value].filter(Boolean).join("-");
-    const cap = caption.value.trim().replace(/"/g, "'");
-    window.lwInsert(`![${alt}](${file.url}${preset ? "#" + preset : ""}${cap ? ` "${cap}"` : ""})`);
-    caption.value = "";
-  }
+  const insert = file => window.lwInsert(window.lwMediaMarkdown(file));
 
   async function load() {
     const ns = nsInput.value.trim().replace(/^\/+|\/+$/g, "");
@@ -162,21 +159,42 @@
     if (!box.hidden) load();
   });
 
+  // lwUpload uploads a file to the picker's folder (the page's, by
+  // default) and returns { name, url, image }; it asks before replacing
+  // a file of the same name.
+  window.lwUpload = async file => {
+    const fd = new FormData();
+    fd.append("ns", nsInput.value.trim());
+    fd.append("file", file);
+    let res = await fetch("/_/media", { method: "POST", body: fd, credentials: "same-origin" });
+    if (res.status === 409 && confirm((await res.text()) + ". Replace it?")) {
+      fd.append("overwrite", "1");
+      res = await fetch("/_/media", { method: "POST", body: fd, credentials: "same-origin" });
+    }
+    if (!res.ok) throw new Error(await res.text());
+    const info = await res.json();
+    return { name: info.name, url: info.url, image: /\.(jpe?g|png|gif|webp|svg)$/i.test(info.name) };
+  };
+  // The markdown for a file, with the picker's size, placement and caption.
+  window.lwMediaMarkdown = file => {
+    if (!file.image) return `[${file.name}](${file.url})`;
+    const alt = file.name.replace(/\.[^.]+$/, "").replace(/[-_]/g, " ");
+    const preset = [sizeSel.value, sideSel.value].filter(Boolean).join("-");
+    const cap = caption.value.trim().replace(/"/g, "'");
+    caption.value = "";
+    return `![${alt}](${file.url}${preset ? "#" + preset : ""}${cap ? ` "${cap}"` : ""})`;
+  };
+
   box.querySelector(".lw-media-file").addEventListener("change", async ev => {
     for (const file of ev.target.files) {
       msg.textContent = "Uploading " + file.name + "…";
-      const fd = new FormData();
-      fd.append("ns", nsInput.value.trim());
-      fd.append("file", file);
-      let res = await fetch("/_/media", { method: "POST", body: fd, credentials: "same-origin" });
-      if (res.status === 409 && confirm((await res.text()) + ". Replace it?")) {
-        fd.append("overwrite", "1");
-        res = await fetch("/_/media", { method: "POST", body: fd, credentials: "same-origin" });
+      try {
+        const info = await window.lwUpload(file);
+        insert(info);
+        msg.textContent = "Uploaded " + info.name + " and inserted it.";
+      } catch (e) {
+        msg.textContent = "Upload failed: " + e.message;
       }
-      if (!res.ok) { msg.textContent = "Upload failed: " + (await res.text()); continue; }
-      const info = await res.json();
-      insert({ name: info.name, url: info.url, image: /\.(jpe?g|png|gif|webp|svg)$/i.test(info.name) });
-      msg.textContent = "Uploaded " + info.name + " and inserted it.";
     }
     ev.target.value = "";
     load();
@@ -196,3 +214,221 @@ document.addEventListener("click", async ev => {
     prompt("Copy this address:", b.dataset.copy);
   }
 });
+
+// Page finder: fuzzy search on page titles and addresses. Opened by "/"
+// or Ctrl+K to jump to a page, and in the editor by "[[" or Ctrl+K to
+// insert a link (standard markdown, the page's address).
+(function () {
+  "use strict";
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+  const fold = s => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+  let pages = null;
+  async function loadPages() {
+    if (!pages) {
+      const res = await fetch("/_/titles", { credentials: "same-origin" });
+      pages = res.ok ? (await res.json()).map(p => ({ ...p, ft: fold(p.t), fid: fold(p.id) })) : [];
+    }
+    return pages;
+  }
+
+  // Score of one query word in a string: a substring beats a scattered
+  // match; the start of the string or of a word scores higher.
+  function wordScore(w, s) {
+    const i = s.indexOf(w);
+    if (i >= 0) return 100 + (i === 0 ? 60 : /[\s\-\/'(]/.test(s[i - 1]) ? 40 : 0) - Math.min(i, 30) / 3;
+    let j = 0, run = 0, score = 0;
+    for (const c of w) {
+      const k = s.indexOf(c, j);
+      if (k < 0) return 0;
+      run = k === j ? run + 1 : 0;
+      score += 1 + run * 2;
+      j = k + 1;
+    }
+    return score;
+  }
+  function rank(q, list) {
+    const words = fold(q).split(/\s+/).filter(Boolean);
+    if (!words.length) return [];
+    const out = [];
+    for (const p of list) {
+      let total = 0;
+      for (const w of words) {
+        const s = Math.max(wordScore(w, p.ft), wordScore(w, p.fid) * 0.6);
+        if (!s) { total = 0; break; }
+        total += s;
+      }
+      if (total) out.push([total - p.t.length / 50, p]);
+    }
+    return out.sort((a, b) => b[0] - a[0]).slice(0, 12).map(x => x[1]);
+  }
+
+  // open shows the finder. opts: placeholder, query (initial text),
+  // extra(q) -> [{label, run}] rows after the matches, pick(page), close().
+  function open(opts) {
+    const old = document.querySelector(".lw-finder");
+    if (old) old.remove();
+    const box = document.createElement("div");
+    box.className = "lw-finder";
+    box.innerHTML = '<div class="lw-finder-box" role="dialog" aria-label="Find a page"><input type="text" spellcheck="false" autocomplete="off" placeholder="' +
+      esc(opts.placeholder) + '"><ul></ul><p class="lw-quiet">↑↓ to choose · Enter · Esc to close</p></div>';
+    document.body.appendChild(box);
+    const input = box.querySelector("input"), ul = box.querySelector("ul");
+    let rows = [], sel = 0, closed = false;
+    const close = picked => {
+      if (closed) return;
+      closed = true;
+      box.remove();
+      if (!picked && opts.close) opts.close();
+    };
+    const render = () => {
+      ul.innerHTML = rows.map((r, i) => '<li class="' + (i === sel ? "lw-sel" : "") + (r.page ? "" : " lw-finder-extra") + '" data-i="' + i + '">' +
+        (r.page ? esc(r.page.t) + ' <span class="lw-quiet">' + esc(r.page.u) + "</span>" : esc(r.label)) + "</li>").join("");
+      const cur = ul.querySelector(".lw-sel");
+      if (cur) cur.scrollIntoView({ block: "nearest" });
+    };
+    const update = async () => {
+      const q = input.value.trim();
+      const found = q ? rank(q, await loadPages()) : [];
+      if (closed || q !== input.value.trim()) return;
+      rows = found.map(p => ({ page: p })).concat(q && opts.extra ? opts.extra(q) : []);
+      sel = 0;
+      render();
+    };
+    const choose = i => {
+      const r = rows[i];
+      if (!r) return;
+      close(true);
+      if (r.page) opts.pick(r.page); else r.run();
+    };
+    input.addEventListener("input", update);
+    input.addEventListener("keydown", e => {
+      if (e.key === "ArrowDown") { e.preventDefault(); sel = Math.min(sel + 1, rows.length - 1); render(); }
+      else if (e.key === "ArrowUp") { e.preventDefault(); sel = Math.max(sel - 1, 0); render(); }
+      else if (e.key === "Enter") { e.preventDefault(); choose(sel); }
+      else if (e.key === "Escape") { e.preventDefault(); close(false); }
+    });
+    ul.addEventListener("mousedown", e => {
+      const li = e.target.closest("li");
+      if (li) { e.preventDefault(); choose(+li.dataset.i); }
+    });
+    box.addEventListener("mousedown", e => { if (e.target === box) close(false); });
+    input.value = opts.query || "";
+    input.focus();
+    loadPages().then(update);
+  }
+
+  // Jump to a page; the last row searches all pages' text.
+  window.lwJump = () => open({
+    placeholder: "Go to a page…",
+    pick: p => { location.href = p.u; },
+    extra: q => [{ label: "Search all pages for “" + q + "”", run: () => { location.href = "/_/search?q=" + encodeURIComponent(q); } }],
+  });
+
+  // Editor: insert a link to a page, with the selected text (if any) as
+  // the link's text; "[[" opens it too (and is replaced by the link).
+  const form = document.querySelector(".lw-editor");
+  const text = form && form.querySelector(".lw-text");
+  if (!form || !text || form.classList.contains("lw-file") || text.readOnly) return;
+  const cm = window.lwCM;
+  const m = location.pathname.replace(/^\/_\/edit\//, "").match(/^(.*)\//);
+  const folder = m ? m[1] : "";
+  const slug = s => fold(s).replace(/[^a-z0-9._]+/g, "-").replace(/^[-._]+|[-._]+$/g, "");
+
+  function linkFinder(dropBrackets) {
+    const selected = cm ? cm.getSelection() : text.value.slice(text.selectionStart, text.selectionEnd);
+    const done = () => { if (cm) cm.focus(); else text.focus(); };
+    const insert = (label, url) => {
+      if (dropBrackets) { // remove the "[[" just typed
+        if (cm) {
+          const c = cm.getCursor();
+          cm.replaceRange("", { line: c.line, ch: c.ch - 2 }, c);
+        } else {
+          const p = text.selectionStart;
+          text.setRangeText("", p - 2, p, "end");
+        }
+      }
+      window.lwInsert("[" + (selected || label).replace(/[\[\]]/g, "") + "](" + url + ")");
+      done();
+    };
+    open({
+      placeholder: "Link to a page…",
+      query: selected,
+      pick: p => insert(p.t, p.u),
+      // A page that does not exist yet: a link to it in this page's folder
+      // (shown as missing until someone writes it).
+      extra: q => [{ label: "New page “" + q + "” in " + (folder || "the top folder"), run: () => insert(q, "/" + (folder ? folder + "/" : "") + slug(q)) }],
+      close: done,
+    });
+  }
+
+  if (cm) {
+    cm.addKeyMap({ "Ctrl-K": () => linkFinder(false), "Cmd-K": () => linkFinder(false) });
+    cm.on("inputRead", (c, change) => {
+      if (change.text.join("") !== "[") return;
+      const cur = c.getCursor();
+      if (c.getRange({ line: cur.line, ch: cur.ch - 2 }, cur) === "[[") linkFinder(true);
+    });
+  } else {
+    text.addEventListener("keydown", e => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") { e.preventDefault(); linkFinder(false); }
+    });
+    text.addEventListener("input", e => {
+      const p = text.selectionStart;
+      if (e.data === "[" && text.value.slice(p - 2, p) === "[[") linkFinder(true);
+    });
+  }
+
+  // Images (and other files) pasted or dropped into the editor are
+  // uploaded to the page's media folder and inserted where they land.
+  // A placeholder marks the spot while the upload runs.
+  if (!window.lwUpload) return;
+  const page = location.pathname.split("/").pop() || "image";
+  const stamp = () => { // local time, 20261118-014443
+    const d = new Date(), p = n => String(n).padStart(2, "0");
+    return d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) + "-" + p(d.getHours()) + p(d.getMinutes()) + p(d.getSeconds());
+  };
+  async function uploadAll(files) {
+    for (let file of files) {
+      // Pasted screenshots are all called "image.png": name them after the page.
+      if (/^image\.(png|jpe?g|gif|webp)$/i.test(file.name)) {
+        file = new File([file], page + "-" + stamp() + "." + file.name.split(".").pop(), { type: file.type });
+      }
+      const mark = "![Uploading " + file.name + "…]()";
+      window.lwInsert(mark);
+      let md = "";
+      try {
+        md = window.lwMediaMarkdown(await window.lwUpload(file));
+      } catch (e) {
+        alert("Upload of " + file.name + " failed: " + e.message);
+      }
+      if (cm) {
+        const i = cm.getValue().indexOf(mark);
+        if (i >= 0) cm.replaceRange(md, cm.posFromIndex(i), cm.posFromIndex(i + mark.length));
+      } else {
+        text.value = text.value.replace(mark, md);
+        text.dispatchEvent(new Event("input"));
+      }
+    }
+  }
+  const filesOf = dt => (dt && dt.files ? Array.from(dt.files) : []);
+  const onPaste = e => {
+    const files = filesOf(e.clipboardData);
+    if (files.length) { e.preventDefault(); uploadAll(files); }
+  };
+  if (cm) {
+    cm.on("paste", (c, e) => onPaste(e));
+    cm.on("drop", (c, e) => {
+      const files = filesOf(e.dataTransfer);
+      if (!files.length) return;
+      e.preventDefault();
+      c.setCursor(c.coordsChar({ left: e.clientX, top: e.clientY }));
+      uploadAll(files);
+    });
+  } else {
+    text.addEventListener("paste", onPaste);
+    text.addEventListener("drop", e => {
+      const files = filesOf(e.dataTransfer);
+      if (files.length) { e.preventDefault(); uploadAll(files); }
+    });
+  }
+})();

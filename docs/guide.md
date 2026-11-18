@@ -76,7 +76,11 @@ reload, and merge by hand.
 
 ### Finding your way
 
-- **Search** (or press <kbd>/</kbd>) looks through titles and text.
+- **Jump to a page**: press <kbd>/</kbd> or <kbd>Ctrl</kbd>+<kbd>K</kbd> and
+  type a few letters of its title (in any order of words, letters can be
+  skipped: `evrlght kp` finds Everlight Keep); <kbd>Enter</kbd> opens it.
+  The last line searches the text of all pages instead.
+- **Search** (in the sidebar) looks through titles and text.
 - **Recent changes** lists the latest edits on the whole wiki.
 - **Backlinks** lists the pages that link to the current page.
 
@@ -133,9 +137,16 @@ get a table of contents in the sidebar. Every heading can be linked to with
 <https://example.com>
 ```
 
-The simplest way: open the page, copy the address from the browser bar,
-and keep only the part after the domain name (`/foolslanding/...`). Full
-addresses (`https://...`) on their own become links too.
+The simplest way, in the editor: type `[[` (or press
+<kbd>Ctrl</kbd>+<kbd>K</kbd>), type a few letters of the page's title and
+press <kbd>Enter</kbd>: the link is written for you. If some text is
+selected when you press <kbd>Ctrl</kbd>+<kbd>K</kbd>, it becomes the link's
+text. The last line, **New page**, links to a page that does not exist yet
+(in the current folder), to be written later.
+
+Otherwise, copy the address from the browser bar and keep only the part
+after the domain name (`/foolslanding/...`). Full addresses (`https://...`)
+on their own become links too.
 
 A link without a `/` at the start is relative to the current page's folder.
 A link ending with `/` points at a folder's front page.
@@ -202,7 +213,12 @@ Text shown exactly as typed,
 Images and files (pdf, sound) are uploaded to the wiki, in folders that
 mirror the page folders: `/_media/foolslanding/map.jpg`.
 
-In the editor, **Images…** shows the files of the page's folder: click one
+In the editor, **paste** an image (a screenshot, an image copied from
+another site) or **drop** image files onto the text: they are uploaded to
+the page's folder and inserted where they land. Pasted screenshots are
+named after the page and the time.
+
+**Images…** shows the files of the page's folder: click one
 to insert it, or **Upload…** a new one (jpg, png, gif, webp, svg, pdf, mp3,
 wav, ogg, m4a, txt; up to 64 MB). The size, placement and caption chosen
 above the files are written into the inserted image. Typing works as well:

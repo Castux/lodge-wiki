@@ -242,6 +242,7 @@ Before going live:
 - [ ] **Media backup tool**: `lodge-wiki backup-media --from <server> --to <folder>` reading `_config/media.json`, copying missing or changed files (and the bin), then verifying hashes. Decide the transport (rsync/SFTP on the server's `_media`, or HTTP as an admin, which needs an admin-only way to fetch bin files).
 - [ ] **Security before going public**: CSRF tokens on forms; HTTP handler tests.
 - [x] **User guide**: `docs/guide.md`, served at `/_/help` (Help in the sidebar), with each widget's `_widgets/<name>/README.md`.
+- [x] **Finding and linking**: quick jump (`/`, Ctrl+K) with fuzzy matching on titles; links by title in the editor (`[[`, Ctrl+K); images pasted or dropped into the editor are uploaded and inserted.
 - [x] **Sync with GitHub** (`--sync`): manual edits pushed to the data repo are merged within 5 minutes or on **Sync now**; on conflict the wiki's version of the file wins and admins are told.
 - [x] **Image layout**: automatic sizing, captions, galleries, `#small`/`#medium`/`#full`/`#left`/`#right` presets, picker options (see the guide).
 - [x] **Delete pages**: Delete in the sidebar (a confirmation page; deleting is saving the page empty, so its history is kept and it can be restored).
@@ -266,5 +267,6 @@ Later:
   - `align="right"` / `"left"` → `#right` / `#left` (with the size word if any), moved to the start of the paragraph it sat in. Many floats came from DokuWiki's space-based alignment (`{{ img}}`) and were probably accidental: list them for a decision instead of converting blindly;
   - images inside links or tables, and anything else unusual: leave as HTML and list;
   - glyphs (`width="40"`/`"45"`, `domination/glyphs/`): leave as HTML, or a small glyph helper later.
+- [ ] **Explore: records from mostly-structured pages.** No page format change: parse the conventions pages already follow (character sheets, items, notices) into records, see how regular they are, and whether a record could drive a fixed layout for its page (or a listing) while the page stays free text. Keeps the wiki's flexibility; exceptions stay plain pages.
 - [ ] **Clean up DokuWiki leftovers in the content**, once the old wiki is retired: the old help pages in `wiki/` (`syntax`, `dokuwiki`, `newlines`, `spoiler-tag`, `welcome`, `orphans`, `stats_script`, `notices-tech`...) and mentions of DokuWiki syntax or plugins elsewhere; point to Help instead.
 - [ ] Ideas that need content edits, once the old wiki is retired: a navigation bar per campaign (`_layout/nav.md`), "recently updated" on campaign home pages (`limit` on `list` blocks), page templates for new logs and stories, character infoboxes.

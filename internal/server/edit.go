@@ -485,3 +485,22 @@ func tidySummary(msg string) string {
 	}
 	return msg
 }
+
+// titles lists every page's id, title and address, for the page finder
+// (quick jump, and links by title in the editor).
+func (s *Server) titles(w http.ResponseWriter, r *http.Request) {
+	type entry struct {
+		ID    string `json:"id"`
+		Title string `json:"t"`
+		URL   string `json:"u"`
+	}
+	idx := s.store.Index()
+	out := make([]entry, 0, len(idx.Pages))
+	for id, p := range idx.Pages {
+		out = append(out, entry{id, p.Title, wiki.PageURL(id)})
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Cache-Control", "private, no-cache")
+	json.NewEncoder(w).Encode(out)
+}

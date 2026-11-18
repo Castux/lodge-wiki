@@ -133,3 +133,23 @@ pre.lw-diff span { display: block; padding: 0 .4em; min-height: 1.45em; }
   :where(.page) :where(p.gallery) { grid-template-columns: repeat(auto-fill, minmax(7rem, 1fr)); }
   :where(.page) :where(p.gallery) img { height: 8rem; }
 }
+
+/* ---------- Page finder ("/" or Ctrl+K; "[[" in the editor) ---------- */
+.lw-finder { position: fixed; inset: 0; z-index: 100; background: rgba(0, 0, 0, .3); }
+.lw-finder-box {
+  width: min(36rem, 92vw); margin: 12vh auto 0; padding: .75rem;
+  background: var(--paper, #fff); color: var(--text, #222);
+  border-radius: 8px; box-shadow: 0 8px 30px rgba(0, 0, 0, .3);
+  font: 15px/1.4 var(--body-font, system-ui, sans-serif);
+}
+.lw-finder-box input {
+  width: 100%; box-sizing: border-box; padding: .5rem .6rem; font: inherit; font-size: 1.05rem;
+  border: 1px solid var(--rule, #ccc); border-radius: 5px; background: #fff; color: #222;
+}
+.lw-finder-box ul { list-style: none; margin: .5rem 0 0; padding: 0; max-height: 55vh; overflow-y: auto; }
+.lw-finder-box li { padding: .35rem .5rem; border-radius: 4px; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lw-finder-box li .lw-quiet { font-size: .85em; margin-left: .4rem; }
+.lw-finder-box li.lw-sel { background: var(--link, #335); color: #fff; }
+.lw-finder-box li.lw-sel .lw-quiet { color: rgba(255, 255, 255, .8); }
+.lw-finder-box li.lw-finder-extra { font-style: italic; }
+.lw-finder-box > p { margin: .5rem 0 0; font-size: .8rem; text-align: right; }
