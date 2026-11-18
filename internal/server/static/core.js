@@ -108,6 +108,16 @@
       window.lwJump();
     }
   });
+
+  // A plain click on a link to the search page opens the finder instead,
+  // which finds pages by title and offers the text search as its last row.
+  // (Ctrl+click and the page itself still work, without JavaScript too.)
+  document.addEventListener("click", e => {
+    const a = e.target.closest && e.target.closest('a[href="/_/search"]');
+    if (!a || e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey || !window.lwJump) return;
+    e.preventDefault();
+    window.lwJump();
+  });
 })();
 
 // Editor: image picker and upload (files go to _media/<folder>/).
@@ -319,7 +329,7 @@ document.addEventListener("click", async ev => {
 
   // Jump to a page; the last row searches all pages' text.
   window.lwJump = () => open({
-    placeholder: "Go to a page…",
+    placeholder: "Find a page, or search the text…",
     pick: p => { location.href = p.u; },
     extra: q => [{ label: "Search all pages for “" + q + "”", run: () => { location.href = "/_/search?q=" + encodeURIComponent(q); } }],
   });

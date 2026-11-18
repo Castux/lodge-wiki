@@ -76,11 +76,10 @@ reload, and merge by hand.
 
 ### Finding your way
 
-- **Jump to a page**: press <kbd>/</kbd> or <kbd>Ctrl</kbd>+<kbd>K</kbd> and
-  type a few letters of its title (in any order of words, letters can be
-  skipped: `evrlght kp` finds Everlight Keep); <kbd>Enter</kbd> opens it.
-  The last line searches the text of all pages instead.
-- **Search** (in the sidebar) looks through titles and text.
+- **Search**: click it, or press <kbd>/</kbd> or <kbd>Ctrl</kbd>+<kbd>K</kbd>,
+  and type a few letters of a page's title (in any order of words, letters
+  can be skipped: `evrlght kp` finds Everlight Keep); <kbd>Enter</kbd> opens
+  it. The last line searches the text of all pages instead.
 - **Recent changes** lists the latest edits on the whole wiki.
 - **Backlinks** lists the pages that link to the current page.
 
