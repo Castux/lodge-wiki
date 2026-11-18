@@ -35,7 +35,7 @@
 cd lodge-wiki && sudo deploy/setup.sh
 ```
 
-It pulls the latest code, rebuilds, rewrites the service and Caddy configuration from `lodge.conf`, restarts the wiki and checks it answers.
+It pulls the latest code, rebuilds, rewrites the service and Caddy configuration from `lodge.conf`, restarts the wiki and checks it answers. Admins see the running version at the bottom of the wiki's sidebar, with the number of newer commits on GitHub once the repository is public.
 
 ## What it sets up
 

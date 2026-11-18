@@ -448,6 +448,9 @@ backed up and restored. Uploaded files are stored next to it, not in git.
   `README.md`, the documentation shown above) defines a widget.
 - `_config/` holds the accounts, notification rules and the list of
   uploaded files. Only admins can see it.
+- Admins see the wiki program's version at the bottom of the sidebar; a
+  "3 new" next to it means newer code is on GitHub (whoever runs the server
+  updates it, see `deploy/README.md`).
 - **Download a backup** (admins, on Recent changes) gives everything in
   one zip: every file, the uploaded files, the history, and how to run the
   wiki again from it.
