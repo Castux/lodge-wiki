@@ -2,7 +2,7 @@
 {{if .Msg}}<p class="lw-note">{{.Msg}}</p>{{end}}
 {{if .Error}}<p class="lw-error">{{.Error}}</p>{{end}}
 <p class="lw-quiet">{{len .Rows}} accounts{{range $k, $v := .Counts}} · {{$v}} {{$k}}{{end}}.
-<strong>Pending</strong>: cannot see anything yet · <strong>reader</strong>: reads · <strong>editor</strong>: edits pages and data · <strong>admin</strong>: also layouts, widgets and users.</p>
+<strong>reader</strong>: reads · <strong>editor</strong>: also edits pages, data and media · <strong>tinkerer</strong>: also layouts and widgets · <strong>admin</strong>: also users and settings.</p>
 
 <table class="lw-history lw-users">
   <thead><tr><th>User</th><th>Role</th><th>Set a new password</th><th></th></tr></thead>
