@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -36,10 +37,12 @@ type View struct {
 	Modified  time.Time
 	Author    string
 	User      string
+	CanRead   bool // false for visitors of a private wiki (the login page)
 	CanEdit   bool
 	IsAdmin   bool
-	Styles    []string // stylesheet URLs, outermost first
-	Layout    string   // URL of the layout folder holding page.html (its script and assets)
+	Styles    []string      // stylesheet URLs, outermost first
+	Layout    string        // URL of the layout folder holding page.html (its script and assets)
+	Sidebar   template.HTML // the nearest _layout/sidebar.md, rendered
 	Head      template.HTML
 	Scripts   template.HTML
 	Tools     []Tool
@@ -155,6 +158,7 @@ func (s *Server) layoutTemplate(dir string) (*template.Template, error) {
 func (s *Server) show(w http.ResponseWriter, r *http.Request, v *View) {
 	v.SiteTitle = s.cfg.Title
 	v.URL = wiki.PageURL(v.ID)
+	v.CanRead = s.can(r, RoleReader)
 	v.CanEdit = s.can(r, RoleEditor)
 	v.IsAdmin = s.can(r, RoleAdmin)
 	if u := s.auth.User(r); u != nil {
@@ -179,6 +183,19 @@ func (s *Server) show(w http.ResponseWriter, r *http.Request, v *View) {
 	}
 	if len(dirs) > 0 {
 		v.Layout = "/" + dirs[0] + "/"
+	}
+	// The sidebar: the nearest _layout/sidebar.md, rendered like a page.
+	// It names pages, so only readers get it.
+	for _, d := range slices.Backward(dirs) {
+		if !v.CanRead {
+			break
+		}
+		if b, err := os.ReadFile(s.store.File(d + "/sidebar.md")); err == nil {
+			res := s.render.Render(wiki.ParsePage(d+"/sidebar", b))
+			v.Sidebar = template.HTML(res.HTML)
+			v.Widgets = append(v.Widgets, res.Widgets...)
+			break
+		}
 	}
 	v.Head = template.HTML(`<link rel="stylesheet" href="/_/static/core.css">`)
 	var scripts strings.Builder
@@ -267,9 +284,9 @@ func (s *Server) tools(v *View) []Tool {
 		}
 		t = append(t, Tool{Name: "backlinks", Label: fmt.Sprintf("Backlinks (%d)", v.Backlinks), URL: "/_/backlinks/" + pagePath, Active: v.Mode == "backlinks"})
 	}
-	t = append(t,
-		Tool{Name: "recent", Label: "Recent changes", URL: "/_/recent", Active: v.Mode == "recent"},
-	)
+	if v.CanRead {
+		t = append(t, Tool{Name: "recent", Label: "Recent changes", URL: "/_/recent", Active: v.Mode == "recent"})
+	}
 	if v.CanEdit {
 		ns := wiki.Namespace(v.ID)
 		if strings.HasPrefix(v.ID, "_") || isFile(v.ID) {

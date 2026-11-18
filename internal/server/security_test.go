@@ -155,7 +155,12 @@ func TestLayoutPublic(t *testing.T) {
 	if w := do(srv, "GET", "/_/login", nil, nil); w.Code != http.StatusOK {
 		t.Errorf("login page: status %d", w.Code)
 	}
-	for _, target := range []string{"/start", "/", "/_widgets/w/w.js", "/_layout/../_config/users.json",
+	os.WriteFile(filepath.Join(root, "_layout", "sidebar.md"), []byte("- [Secret](/secret)\n"), 0o644)
+	os.WriteFile(filepath.Join(root, "_layout", "page.html"), []byte("{{.Sidebar}}{{range .Tools}}{{.Name}} {{end}}{{.Content}}"), 0o644)
+	if body := do(srv, "GET", "/_/login", nil, nil).Body.String(); strings.Contains(body, "Secret") || strings.Contains(body, "recent") {
+		t.Errorf("the login page shows the sidebar or recent changes to a visitor:\n%s", body)
+	}
+	for _, target := range []string{"/start", "/", "/_widgets/w/w.js", "/_layout/../_config/users.json", "/_layout/sidebar.md",
 		"/_config/_layout/x", "/a/_layout", "/_media/a/pic.png", "/_/raw/start.md"} {
 		w := do(srv, "GET", target, nil, nil)
 		if w.Code == http.StatusOK || strings.Contains(w.Body.String(), "secrethash") {
@@ -174,5 +179,40 @@ func TestCrossOriginRefused(t *testing.T) {
 	w = do(srv, "POST", "/_/edit/start", url.Values{"text": {"# Home again"}, "base": {"-"}}, map[string]string{"Sec-Fetch-Site": "same-origin"})
 	if w.Code != http.StatusSeeOther {
 		t.Errorf("same-origin POST: status %d, want 303", w.Code)
+	}
+}
+
+// The nearest _layout/sidebar.md is rendered into the layout.
+func TestSidebar(t *testing.T) {
+	srv, root, _ := testWiki(t, "reader")
+	write := func(p, s string) {
+		os.MkdirAll(filepath.Dir(filepath.Join(root, p)), 0o755)
+		os.WriteFile(filepath.Join(root, p), []byte(s), 0o644)
+	}
+	write("_layout/page.html", "<nav>{{.Sidebar}}</nav>{{.Content}}")
+	write("_layout/sidebar.md", "- [Wiki help](/wiki/)\n")
+	write("camp/_layout/sidebar.md", "**People**\n\n- [Characters](/camp/pc/)\n")
+	write("camp/a.md", "# A\n")
+	write("other/b.md", "# B\n")
+	srv.store.Reindex()
+	for target, want := range map[string]string{
+		"/":        "Wiki help",
+		"/other/b": "Wiki help",
+		"/camp/a":  "Characters",
+	} {
+		body := do(srv, "GET", target, nil, nil).Body.String()
+		if !strings.Contains(body, "<nav>") || !strings.Contains(body, want) {
+			t.Errorf("%s: sidebar without %q:\n%s", target, want, body)
+		}
+	}
+	if body := do(srv, "GET", "/camp/a", nil, nil).Body.String(); strings.Contains(body, "Wiki help") {
+		t.Error("/camp/a: got the root sidebar too")
+	}
+	// Markdown in "_" folders is a file to edit in Files, not a page.
+	for id, want := range map[string]bool{"_layout/sidebar.md": true, "camp/_layout/sidebar.md": true,
+		"_widgets/map/README.md": true, "camp/a": false, "camp/a.md": false, "camp/data.json": true} {
+		if isFile(id) != want {
+			t.Errorf("isFile(%q) = %v", id, !want)
+		}
 	}
 }

@@ -120,8 +120,9 @@ func (s *Server) routes() {
 	pages := s.need(RoleReader, s.page)
 	m.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
 		// The look (_layout: CSS, fonts, images) is served to everyone, so
-		// the login page of a private wiki is styled too. It holds no content.
-		if isLayoutPath(r.URL.Path) {
+		// the login page of a private wiki is styled too. Its Markdown (the
+		// sidebar) names pages, so it is not.
+		if isLayoutPath(r.URL.Path) && !strings.HasSuffix(r.URL.Path, ".md") {
 			s.repoFile(w, r)
 			return
 		}

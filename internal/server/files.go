@@ -32,10 +32,17 @@ var textExts = map[string]string{
 	".txt": "text", ".svg": "svg", ".yaml": "yaml", ".yml": "yaml", ".md": "markdown",
 }
 
-// isFile reports whether an id names a file with an extension (not a page).
+// isFile reports whether an id names a file with an extension (not a
+// page). Markdown inside a "_" folder (a sidebar, a widget's README) is a
+// file too: pages never live there.
 func isFile(id string) bool {
 	_, ok := textExts[strings.ToLower(path.Ext(id))]
-	return ok && !strings.HasSuffix(id, ".md")
+	return ok && (!strings.HasSuffix(id, ".md") || inSpecialFolder(id))
+}
+
+// inSpecialFolder reports whether a repo path is inside a "_" folder.
+func inSpecialFolder(file string) bool {
+	return strings.HasPrefix(file, "_") || strings.Contains(file, "/_")
 }
 
 // fileOf maps an id to its repo-relative file.
@@ -325,7 +332,7 @@ func (s *Server) files(w http.ResponseWriter, r *http.Request) {
 		}
 		if !fe.Dir {
 			ext := strings.ToLower(path.Ext(rel))
-			if ext == ".md" {
+			if ext == ".md" && !inSpecialFolder(rel) {
 				fe.Page = strings.TrimSuffix(rel, ".md")
 				fe.Title = s.store.Title(fe.Page)
 			}

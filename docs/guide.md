@@ -442,8 +442,12 @@ git repository, one commit per change, so the whole wiki can be copied,
 backed up and restored. Uploaded files are stored next to it, not in git.
 
 - `_layout/page.html` and `_layout/style.css` give the wiki its look; a
-  folder can have its own `_layout/` (Skarnholm does), which applies to
-  everything under it.
+  folder can have its own `_layout/` (each campaign does), which applies to
+  everything under it: its `style.css` is added after the main one.
+- `_layout/sidebar.md` is the sidebar: plain Markdown (usually a bold line
+  per group, then a list of links), shown on every page by the layout. The
+  nearest one applies, so each campaign has its own sections, and the
+  wiki's own pages get the top-level one. Admins edit it from **Files**.
 - `_widgets/<name>/widget.js` (with optional `widget.css` and
   `README.md`, the documentation shown above) defines a widget.
 - `_config/` holds the accounts, notification rules and the list of
