@@ -9,7 +9,7 @@
 </head>
 <body class="lw-default mode-{{.Mode}}">
 <header class="lw-bar"><a href="/" class="lw-site">{{.SiteTitle}}</a>
-<nav class="lw-tools">{{range .Tools}}{{if .Post}}<form method="post" action="{{.URL}}" class="lw-inline"><button class="lw-link">{{.Label}}</button></form>{{else}}<a href="{{.URL}}" data-tool="{{.Name}}"{{if .Active}} class="lw-active"{{end}}>{{.Label}}</a>{{end}}{{end}}</nav></header>
+<nav class="lw-tools">{{range .Tools}}{{if .Post}}<form method="post" action="{{.URL}}" class="lw-inline"><button class="lw-link">{{.Label}}</button></form>{{else}}{{if .URL}}<a href="{{.URL}}" data-tool="{{.Name}}"{{if .Active}} class="lw-active"{{end}}>{{.Label}}</a>{{else}}<span>{{.Label}}</span>{{end}}{{with .Badge}} <span class="lw-badge">{{.}}</span>{{end}}{{end}}{{end}}</nav></header>
 <nav class="breadcrumbs">{{range .Crumbs}}{{if .Last}}<span>{{.Title}}</span>{{else}}<a href="{{.URL}}">{{.Title}}</a> › {{end}}{{end}}</nav>
 <main class="page">{{.TOC}}{{.Content}}</main>
 {{if not .Modified.IsZero}}<footer class="lw-pageinfo">Last modified {{date .Modified}}{{if .Author}} by {{.Author}}{{end}}</footer>{{end}}

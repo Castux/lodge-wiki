@@ -11,6 +11,7 @@ import (
 	"os"
 	"path"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/Castux/lodge-wiki/internal/render"
@@ -27,6 +28,7 @@ type Config struct {
 	Notify    bool          // send notifications (otherwise they are only logged)
 	Sync      bool          // sync the content repo with its upstream: merge, push (see wiki.Git.Sync)
 	SyncEvery time.Duration // how often to check the upstream for changes made elsewhere
+	Version   string        // the running build, "<commit> <date>" (default: from Go's build info)
 }
 
 // Server serves one wiki.
@@ -39,7 +41,8 @@ type Server struct {
 	ui         *template.Template
 	limiter    limiter
 	loginLimit limiter
-	syncing    bool // syncing with the upstream (--sync)
+	syncing    bool         // syncing with the upstream (--sync)
+	newer      atomic.Int64 // commits on the code's main branch that this build lacks
 }
 
 // New creates a server.
@@ -68,6 +71,9 @@ func New(cfg Config) (*Server, error) {
 		if !s.syncing {
 			log.Printf("--sync: the content repo's branch has no upstream; not syncing")
 		}
+	}
+	if s.cfg.Version == "" {
+		s.cfg.Version = buildVersion()
 	}
 	s.routes()
 	return s, nil

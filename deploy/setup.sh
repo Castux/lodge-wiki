@@ -129,7 +129,9 @@ say "Code"
 [ -d "$REPO/.git" ] && note "lodge-wiki at $(sudo -u "$OWNER" git -C "$REPO" log -1 --format='%h %s')"
 OLD_SUM="$(sha256sum "$BIN" 2>/dev/null | cut -d' ' -f1 || true)"
 # Pure Go (no cgo): the packaged Go brings gcc but not the C headers.
-( cd "$REPO" && CGO_ENABLED=0 GOFLAGS="-trimpath -buildvcs=false" go build -o /tmp/lodge-wiki.new . )
+# The running version, shown to admins in the sidebar.
+VERSION="$(sudo -u "$OWNER" git -C "$REPO" log -1 --format='%H %cs')"
+( cd "$REPO" && CGO_ENABLED=0 GOFLAGS="-trimpath -buildvcs=false" go build -ldflags "-X 'main.version=$VERSION'" -o /tmp/lodge-wiki.new . )
 install -m 755 /tmp/lodge-wiki.new "$BIN" && rm /tmp/lodge-wiki.new
 NEW_SUM="$(sha256sum "$BIN" | cut -d' ' -f1)"
 [ "$OLD_SUM" = "$NEW_SUM" ] && note "binary unchanged" || note "built $BIN"

@@ -80,7 +80,8 @@ type Crumb struct {
 // Tool is a page or site action shown by the layout.
 type Tool struct {
 	Name, Label, URL string
-	Post             bool // needs a POST form (logout)
+	Badge            string // a short note beside it ("3 new")
+	Post             bool   // needs a POST form (logout)
 	Active           bool
 }
 
@@ -328,6 +329,9 @@ func (s *Server) tools(v *View) []Tool {
 			t = append(t, Tool{Name: "users", Label: "Users", URL: "/_/users", Active: v.Mode == "users"})
 		}
 		t = append(t, Tool{Name: "logout", Label: "Log out (" + v.User + ")", URL: "/_/logout", Post: true})
+		if vt, ok := s.versionTool(); ok && v.IsAdmin {
+			t = append(t, vt)
+		}
 	} else {
 		t = append(t, Tool{Name: "login", Label: "Log in", URL: "/_/login?next=" + v.URL})
 	}

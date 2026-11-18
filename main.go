@@ -22,6 +22,10 @@ import (
 	"github.com/Castux/lodge-wiki/internal/server"
 )
 
+// version is set when building for a server (deploy/setup.sh):
+// "<commit> <date>". Otherwise Go's build info gives it, if it can.
+var version string
+
 func main() {
 	root := flag.String("root", "../lodge-data", "content repository")
 	state := flag.String("state", "", "disposable runtime state folder (session key, scaled-image cache); default: <root>/../lodge-state")
@@ -65,10 +69,11 @@ func main() {
 	}
 
 	start := time.Now()
-	srv, err := server.New(server.Config{Root: *root, State: *state, Title: *title, Public: *public, DevUser: *devAs, Notify: *notify, Sync: *syncRepo, SyncEvery: *syncEvery})
+	srv, err := server.New(server.Config{Root: *root, State: *state, Title: *title, Public: *public, DevUser: *devAs, Notify: *notify, Sync: *syncRepo, SyncEvery: *syncEvery, Version: version})
 	if err != nil {
 		log.Fatal(err)
 	}
+	go srv.WatchUpdates()
 	log.Printf("indexed %d pages in %s", len(srv.Store().Index().Pages), time.Since(start).Round(time.Millisecond))
 	go srv.SyncMediaManifest()
 	if *devAs != "" {
