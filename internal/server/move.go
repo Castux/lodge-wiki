@@ -255,7 +255,7 @@ func cleanPath(p string) string {
 
 // kindOf says what a repo path is: "page", "folder", "media", or "" (also
 // for paths that are not allowed: outside the repository, hidden, or in
-// admin-only folders).
+// "_" folders).
 func (s *Server) kindOf(rel string) string {
 	if m, ok := strings.CutPrefix(rel, "_media/"); ok {
 		if ok, _ := fileAccess(m); ok {
@@ -263,7 +263,7 @@ func (s *Server) kindOf(rel string) string {
 		}
 		return ""
 	}
-	if ok, admin := fileAccess(rel); !ok || admin {
+	if ok, special := fileAccess(rel); !ok || special {
 		return ""
 	}
 	if strings.HasSuffix(rel, ".md") {

@@ -32,7 +32,8 @@ func testWiki(t *testing.T, as string) (srv *Server, root, state string) {
 	os.WriteFile(filepath.Join(root, "_media", "a", "pic.png"), []byte("not really a png"), 0o644)
 	os.WriteFile(filepath.Join(root, "_config", "users.json"), []byte(`{
   "reader": {"hash": "$2a$10$secrethashsecrethashsecrethashsecrethashsecrethashsec", "role": 1},
-  "editor": {"hash": "$2a$10$secrethashsecrethashsecrethashsecrethashsecrethashsec", "role": 2}
+  "editor": {"hash": "$2a$10$secrethashsecrethashsecrethashsecrethashsecrethashsec", "role": 2},
+  "tinkerer": {"hash": "$2a$10$secrethashsecrethashsecrethashsecrethashsecrethashsec", "role": 3}
 }
 `), 0o644)
 	exec.Command("git", "init", "-q", root).Run()
@@ -257,7 +258,7 @@ func TestBackup(t *testing.T) {
 	if w := do(srv, "GET", "/_/backup", nil, nil); w.Code == http.StatusOK {
 		t.Fatal("an editor got the backup")
 	}
-	os.WriteFile(filepath.Join(root, "_config", "users.json"), []byte(`{"boss": {"hash": "$2a$10$secrethashsecrethashsecrethashsecrethashsecrethashsec", "role": 3}}`), 0o644)
+	os.WriteFile(filepath.Join(root, "_config", "users.json"), []byte(`{"boss": {"hash": "$2a$10$secrethashsecrethashsecrethashsecrethashsecrethashsec", "role": 4}}`), 0o644)
 	srv, err := New(Config{Root: root, State: t.TempDir(), Title: "t", DevUser: "boss"})
 	if err != nil {
 		t.Fatal(err)
@@ -283,5 +284,33 @@ func TestBackup(t *testing.T) {
 		if strings.HasPrefix(name, "lodge-data/.git/") {
 			t.Fatalf("the .git folder is in the zip: %s", name)
 		}
+	}
+}
+
+// Layouts and widgets: tinkerers and admins only; settings: admins only.
+func TestTinkerer(t *testing.T) {
+	try := func(as, file string) int {
+		srv, _, _ := testWiki(t, as)
+		return do(srv, "POST", "/_/edit/"+file, url.Values{"text": {"x"}}, nil).Code
+	}
+	for _, c := range []struct {
+		as, file string
+		ok       bool
+	}{
+		{"editor", "newpage", true},
+		{"editor", "_layout/style.css", false},
+		{"editor", "_widgets/dice/widget.js", false},
+		{"tinkerer", "_layout/style.css", true},
+		{"tinkerer", "_widgets/dice/widget.js", true},
+		{"tinkerer", "_config/notifications.json", false},
+		{"tinkerer", "_config/users.json", false},
+	} {
+		if code := try(c.as, c.file); (code == http.StatusSeeOther) != c.ok {
+			t.Errorf("%s saving %s: status %d", c.as, c.file, code)
+		}
+	}
+	srv, _, _ := testWiki(t, "tinkerer")
+	if w := do(srv, "GET", "/_/users", nil, nil); w.Code != http.StatusForbidden {
+		t.Errorf("tinkerer on the users page: status %d", w.Code)
 	}
 }

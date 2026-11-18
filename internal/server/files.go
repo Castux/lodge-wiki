@@ -25,7 +25,8 @@ import (
 //   - other text files (data, layouts, widgets): <id> with its extension
 //
 // Files under a folder starting with "_" (_layout, _widgets) run in every
-// reader's browser, so only admins may change them.
+// reader's browser, so only tinkerers and admins may change them; _config
+// only admins.
 
 var textExts = map[string]string{
 	".json": "json", ".css": "css", ".js": "javascript", ".html": "html",
@@ -54,9 +55,9 @@ func fileOf(id string) string {
 }
 
 // fileAccess checks a repo path: ok=false for paths that are never
-// editable (.git, _media, dot files); admin=true when only admins may
-// change it.
-func fileAccess(file string) (ok, admin bool) {
+// editable (.git, _media, dot files); special=true inside a "_" folder,
+// which only tinkerers may change (see canChange).
+func fileAccess(file string) (ok, special bool) {
 	if file == "" || strings.Contains(file, "..") || strings.ContainsRune(file, '\\') || !filepath.IsLocal(filepath.FromSlash(file)) {
 		return false, false
 	}
@@ -68,10 +69,10 @@ func fileAccess(file string) (ok, admin bool) {
 			return false, false
 		}
 		if strings.HasPrefix(seg, "_") {
-			admin = true
+			special = true
 		}
 	}
-	return true, admin
+	return true, special
 }
 
 // isPrivate reports whether a repo path is in a private folder (_config):
@@ -90,16 +91,29 @@ func (s *Server) hidePrivate(w http.ResponseWriter, r *http.Request, id string) 
 }
 
 func (s *Server) checkEditable(w http.ResponseWriter, r *http.Request, id string) bool {
-	ok, admin := fileAccess(fileOf(id))
+	ok, _ := fileAccess(fileOf(id))
 	if !ok {
 		http.Error(w, "this file cannot be edited here", http.StatusBadRequest)
 		return false
 	}
-	if admin && !s.can(r, RoleAdmin) {
-		http.Error(w, "only admins can change layouts and widgets", http.StatusForbidden)
+	if !s.canChange(r, fileOf(id)) {
+		http.Error(w, "only tinkerers can change layouts and widgets, and only admins the settings", http.StatusForbidden)
 		return false
 	}
 	return true
+}
+
+// canChange reports whether the user may change a file that fileAccess
+// allows: anyone who edits for ordinary files, tinkerers for "_" folders,
+// admins for _config.
+func (s *Server) canChange(r *http.Request, file string) bool {
+	switch {
+	case isPrivate(file):
+		return s.can(r, RoleAdmin)
+	case inSpecialFolder(file):
+		return s.can(r, RoleTinkerer)
+	}
+	return s.can(r, RoleEditor)
 }
 
 // editData is what ui/edit.html receives.
@@ -170,8 +184,8 @@ func validate(file string, content []byte) string {
 			return "This is not a valid accounts file, so it was not saved: " + err.Error()
 		}
 		for name, u := range users {
-			if u == nil || !strings.HasPrefix(u.Hash, "$2") || u.Role < RolePending || u.Role > RoleAdmin {
-				return "The account " + name + " needs a bcrypt password hash and a role from 0 to 3, so nothing was saved."
+			if u == nil || !strings.HasPrefix(u.Hash, "$2") || u.Role < RoleReader || u.Role > RoleAdmin {
+				return "The account " + name + " needs a bcrypt password hash and a role (1 reader, 2 editor, 3 tinkerer, 4 admin), so nothing was saved."
 			}
 		}
 	}
@@ -263,7 +277,7 @@ type FileEntry struct {
 	Modified time.Time
 	Page     string // page id, for .md files
 	Editable bool
-	Admin    bool // only admins may edit
+	Who      string // "tinkerers" or "admins" when only they may change it
 	Title    string
 	Movable  bool
 	Media    bool // a file or folder under _media
@@ -321,12 +335,17 @@ func (s *Server) files(w http.ResponseWriter, r *http.Request) {
 			rows = append(rows, FileEntry{Name: "_media", Path: "_media", Dir: true, Media: true})
 			continue
 		}
-		ok, admin := fileAccess(rel)
+		ok, special := fileAccess(rel)
 		if !ok || (isPrivate(rel) && !isAdmin) {
 			continue
 		}
-		fe := FileEntry{Name: e.Name(), Path: rel, Dir: e.IsDir(), Admin: admin}
-		fe.Movable = !admin && (fe.Dir || strings.HasSuffix(rel, ".md"))
+		fe := FileEntry{Name: e.Name(), Path: rel, Dir: e.IsDir()}
+		if isPrivate(rel) {
+			fe.Who = "admins"
+		} else if special {
+			fe.Who = "tinkerers"
+		}
+		fe.Movable = !special && (fe.Dir || strings.HasSuffix(rel, ".md"))
 		if info, err := e.Info(); err == nil {
 			fe.Size, fe.Modified = info.Size(), info.ModTime()
 		}
@@ -337,7 +356,7 @@ func (s *Server) files(w http.ResponseWriter, r *http.Request) {
 				fe.Title = s.store.Title(fe.Page)
 			}
 			_, text := textExts[ext]
-			fe.Editable = text && (!admin || isAdmin)
+			fe.Editable = text && s.canChange(r, rel)
 			if m, ok := managedFiles[rel]; ok {
 				fe.Managed, fe.ReadOnly = true, m.ReadOnly
 			}
@@ -359,11 +378,10 @@ func (s *Server) files(w http.ResponseWriter, r *http.Request) {
 		acc = path.Join(acc, seg)
 		crumbs = append(crumbs, Crumb{Title: seg, URL: "/_/files?dir=" + url.QueryEscape(acc)})
 	}
-	_, dirAdmin := fileAccess(path.Join(dir, "x"))
 	s.show(w, r, &View{ID: "_files", Title: "Files", Mode: "files",
 		Content: s.ui_("files.html", map[string]any{
 			"Dir": dir, "Crumbs": crumbs, "Rows": rows, "Saved": r.URL.Query().Get("saved"),
-			"CanCreate": (!dirAdmin || isAdmin) && !inMedia, "IsAdmin": isAdmin,
+			"CanCreate": s.canChange(r, path.Join(dir, "x")) && !inMedia, "CanTinker": s.can(r, RoleTinkerer),
 			"InMedia": inMedia, "MediaNS": strings.TrimPrefix(strings.TrimPrefix(dir, "_media"), "/"),
 		})})
 }

@@ -417,12 +417,13 @@ Accounts are created by an admin, who gives each one a role:
 | --- | --- |
 | reader | read every page and its history |
 | editor | also edit, create, rename, upload, use widgets that save |
+| tinkerer | also change the look and the widgets (`_layout`, `_widgets`) |
 | admin | also manage accounts and the wiki's settings (`_config`) |
 
 **Your account** in the sidebar changes your password, real name and
 email (only admins see these two).
 
-## How the wiki is built (for admins)
+## How the wiki is built (for tinkerers and admins)
 
 Everything (pages, data files, layouts, widgets, accounts) is stored in a
 git repository, one commit per change, so the whole wiki can be copied,
@@ -434,7 +435,7 @@ backed up and restored. Uploaded files are stored next to it, not in git.
 - `_layout/sidebar.md` is the sidebar: plain Markdown (usually a bold line
   per group, then a list of links), shown on every page by the layout. The
   nearest one applies, so each campaign has its own sections, and the
-  wiki's own pages get the top-level one. Admins edit it from **Files**.
+  wiki's own pages get the top-level one. Edit it from **Files**.
 - `_widgets/<name>/widget.js` (with optional `widget.css` and
   `README.md`, the documentation shown above) defines a widget.
 - `_config/` holds the accounts, notification rules and the list of

@@ -38,7 +38,7 @@
   {{range .Rows}}
   <tr>
     {{if .Dir}}
-    <td><a href="/_/files?dir={{.Path}}">📁 {{.Name}}</a>{{if .Admin}} <span class="lw-quiet">(admins)</span>{{end}}{{if .Media}} <span class="lw-quiet">images and other media</span>{{end}}</td><td></td><td></td>
+    <td><a href="/_/files?dir={{.Path}}">📁 {{.Name}}</a>{{with .Who}} <span class="lw-quiet">({{.}})</span>{{end}}{{if .Media}} <span class="lw-quiet">images and other media</span>{{end}}</td><td></td><td></td>
     <td class="lw-actions">{{if .Movable}}<a href="/_/mv?path={{.Path}}">move</a>{{end}}</td>
     {{else}}
     <td>{{if .Page}}<a href="{{pageurl .Page}}">{{.Name}}</a>{{if .Title}} <span class="lw-quiet">{{.Title}}</span>{{end}}{{else}}{{.Name}}{{end}}{{if .Managed}} <span class="lw-badge" title="Written by the wiki itself">{{if .ReadOnly}}maintained by the wiki{{else}}managed by the wiki: edit with care{{end}}</span>{{end}}</td>
@@ -61,5 +61,5 @@
 </form>
 <p class="lw-quiet">A name without extension creates a page. For a new widget, create <code>widget.js</code> (and optionally <code>widget.css</code>) in a new folder under <code>_widgets/</code>, e.g. <code>_widgets/dice/widget.js</code>, then use it in a page with a <code>```widget dice</code> block. Images and other media are in <a href="/_/files?dir=_media">_media</a>.</p>
 {{end}}
-{{if not .IsAdmin}}<p class="lw-quiet">Layouts and widgets (folders starting with <code>_</code>) can only be changed by admins.</p>{{end}}
+{{if not .CanTinker}}<p class="lw-quiet">Layouts and widgets (folders starting with <code>_</code>) can only be changed by tinkerers and admins.</p>{{end}}
 {{end}}

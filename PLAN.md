@@ -275,7 +275,7 @@ Later:
 
 - [ ] **Discord login**: needs a Discord application (client id, secret) and the public address for the redirect.
 - [ ] Empty the media bin (admins).
-- [ ] Drop the `pending` role: accounts are created by admins, there is no sign-up page.
+- [x] Drop the `pending` role: accounts are created by admins, there is no sign-up page. A `tinkerer` role (between editor and admin) can change layouts and widgets.
 - [x] **Convert the old HTML images to markdown**: done with `migrate/fixes/imgtags` (933 images: width ≤ 250 `#small`, ≤ 500 `#medium`, > 700 `#full`, `align` left/right kept as `#left`/`#right`). Left as HTML: the Domination glyph tables, two images in an HTML block (Emir Rashad), two with a height (wiki/syntax). The floats were kept as they were; some came from DokuWiki's space-based alignment and may be accidental: fix by hand when seen.
 - [ ] **Explore: records from mostly-structured pages.** No page format change: parse the conventions pages already follow (character sheets, items, notices) into records, see how regular they are, and whether a record could drive a fixed layout for its page (or a listing) while the page stays free text. Keeps the wiki's flexibility; exceptions stay plain pages.
 - [x] **Clean up DokuWiki leftovers in the content**: old help pages deleted, the wiki section, notices guide, game setup and story template rewritten; story names unified (`yyyy-mm-dd-…`).

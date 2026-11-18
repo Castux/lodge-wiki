@@ -64,7 +64,7 @@ const newRev = await wiki.write("ns/file.json", data, rev, { summary: "…", wid
 const { pages, namespaces } = await wiki.list("ns");
 ```
 
-Every write is a git commit by the logged-in user (editors and admins; readers can only read). A write based on an outdated `rev` fails with `err.conflict = true` instead of overwriting; reload and retry. Writes are limited to 30 a minute per user. `GET /_/log?since=YYYY-MM-DD` returns the commit history as JSON.
+Every write is a git commit by the logged-in user (editors and up; readers can only read). A write based on an outdated `rev` fails with `err.conflict = true` instead of overwriting; reload and retry. Writes are limited to 30 a minute per user. `GET /_/log?since=YYYY-MM-DD` returns the commit history as JSON.
 
 ## Deploying
 

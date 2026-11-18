@@ -283,10 +283,6 @@ func (s *Server) need(role Role, h http.HandlerFunc) http.Handler {
 				http.Redirect(w, r, "/_/login?next="+url.QueryEscape(r.URL.RequestURI()), http.StatusFound)
 				return
 			}
-			if u.Role == RolePending {
-				http.Error(w, "Your account is waiting for an admin to approve it.", http.StatusForbidden)
-				return
-			}
 			http.Error(w, "Forbidden", http.StatusForbidden)
 			return
 		}

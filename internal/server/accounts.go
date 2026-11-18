@@ -173,14 +173,14 @@ func (s *Server) showUsers(w http.ResponseWriter, r *http.Request, msg, errMsg s
 	}
 	s.show(w, r, &View{ID: "_users", Title: "Users", Mode: "users", Status: status,
 		Content: s.ui_("users.html", map[string]any{"Rows": rows, "Msg": msg, "Error": errMsg, "Counts": counts,
-			"Me": s.auth.User(r).Name, "Roles": []string{"pending", "reader", "editor", "admin"}})})
+			"Me": s.auth.User(r).Name, "Roles": []string{"reader", "editor", "tinkerer", "admin"}})})
 }
 
 // usersSave handles the users page's actions: add, role, password, delete.
 func (s *Server) usersSave(w http.ResponseWriter, r *http.Request) {
 	me := s.auth.User(r).Name
 	name := strings.ToLower(strings.TrimSpace(r.FormValue("name")))
-	role := RolePending
+	role := RoleReader
 	for k, v := range RoleNames {
 		if v == r.FormValue("role") {
 			role = k

@@ -338,8 +338,8 @@ func (s *Server) index(w http.ResponseWriter, r *http.Request) {
 func rawPath(r *http.Request) (string, bool) {
 	p := path.Clean(strings.TrimPrefix(r.URL.Path, "/_/raw/"))
 	// Widgets may only reach ordinary files: not admin-only folders
-	// (_layout, _widgets, _config), hidden files or anything outside.
-	if ok, admin := fileAccess(p); !ok || admin {
+	// ("_" folders: _layout, _widgets, _config), hidden files or anything outside.
+	if ok, special := fileAccess(p); !ok || special {
 		return "", false
 	}
 	switch path.Ext(p) {

@@ -25,14 +25,14 @@ import (
 type Role int
 
 const (
-	RolePending Role = iota // registered, not approved yet: no access
-	RoleReader
-	RoleEditor
-	RoleAdmin
+	RoleReader   Role = iota + 1 // reads every page and its history
+	RoleEditor                   // also edits pages, data and media
+	RoleTinkerer                 // also edits layouts and widgets ("_" folders)
+	RoleAdmin                    // also accounts and settings (_config)
 )
 
 // RoleNames are the roles shown in the users page.
-var RoleNames = map[Role]string{RolePending: "pending", RoleReader: "reader", RoleEditor: "editor", RoleAdmin: "admin"}
+var RoleNames = map[Role]string{RoleReader: "reader", RoleEditor: "editor", RoleTinkerer: "tinkerer", RoleAdmin: "admin"}
 
 // User is an account.
 type User struct {
