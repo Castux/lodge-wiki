@@ -165,7 +165,7 @@
   nsInput.addEventListener("change", load);
   btn.addEventListener("click", () => {
     box.hidden = !box.hidden;
-    btn.classList.toggle("lw-active", !box.hidden);
+    btn.setAttribute("aria-pressed", !box.hidden);
     if (!box.hidden) load();
   });
 

@@ -226,7 +226,7 @@ another site) or **drop** image files onto the text: they are uploaded to
 the page's folder and inserted where they land. Pasted screenshots are
 named after the page and the time.
 
-**Images…** shows the files of the page's folder: click one
+**Images** (the last of the small buttons) shows the files of the page's folder: click one
 to insert it, or **Upload…** a new one (jpg, png, gif, webp, svg, pdf, mp3,
 wav, ogg, m4a, txt; up to 64 MB). The size, placement and caption chosen
 above the files are written into the inserted image. Typing works as well:
