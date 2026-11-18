@@ -95,9 +95,10 @@ others in the history. On a page, <kbd>e</kbd> opens the editor.
 
 The small buttons next to the tabs write the Markdown for you, and show
 it: bold and italic (<kbd>Ctrl</kbd>+<kbd>B</kbd>, <kbd>Ctrl</kbd>+<kbd>I</kbd>)
-wrap the selected text, or unwrap it; heading, quote and lists mark the
-selected lines, or unmark them; link opens the page finder; the last one
-inserts a table.
+wrap the selected text, or unwrap it; heading turns the line into a
+heading, then a smaller one (`#`, `##`, `###`), then back to text; quote and
+lists mark the selected lines, or unmark them; link opens the page finder;
+table inserts a small table; **Images** opens the picker described below.
 
 ### Text
 

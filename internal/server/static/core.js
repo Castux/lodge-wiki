@@ -412,7 +412,8 @@ document.addEventListener("click", async ev => {
 
   // Formatting buttons (and Ctrl+B, Ctrl+I): bold and italic wrap the
   // selection, or a placeholder to type over, and unwrap it when it is
-  // already wrapped; headings, quotes and lists add or remove their mark at
+  // already wrapped; the heading button cycles the cursor's line through
+  // #, ##, ### and back to plain text; quotes and lists add or remove their mark at
   // the start of the selected lines; the table button inserts a small table.
   function wrap(mk, placeholder) {
     const v = ed.value();
@@ -429,7 +430,6 @@ document.addEventListener("click", async ev => {
   }
 
   const PREFIX = {
-    heading: { re: /^#{1,6}\s+/, add: () => "## " },
     quote: { re: /^>\s?/, add: () => "> " },
     list: { re: /^([-*+]|\d+[.)])\s+/, add: () => "- " },
     numbered: { re: /^([-*+]|\d+[.)])\s+/, add: i => i + 1 + ". " },
@@ -458,6 +458,17 @@ document.addEventListener("click", async ev => {
     ed.replace(start, end, out, start, start + out.length);
   }
 
+  function heading() {
+    const v = ed.value(), [a, b] = ed.sel();
+    const start = v.lastIndexOf("\n", a - 1) + 1;
+    let end = v.indexOf("\n", a);
+    if (end < 0) end = v.length;
+    const line = v.slice(start, end), m = line.match(/^(#{1,6})\s+/) || ["", ""];
+    const depth = m[1].length >= 3 ? 0 : m[1].length + 1, out = (depth ? "#".repeat(depth) + " " : "") + line.slice(m[0].length);
+    const keep = p => Math.max(start, p + out.length - line.length); // the cursor stays on the same text
+    ed.replace(start, end, out, keep(a), keep(b));
+  }
+
   function table() {
     const v = ed.value(), b = ed.sel()[1];
     let at = v.indexOf("\n", b);
@@ -472,7 +483,7 @@ document.addEventListener("click", async ev => {
   const ACTIONS = {
     bold: () => wrap("**", "bold text"), italic: () => wrap("*", "italic text"),
     link: () => linkFinder(false), table,
-    heading: () => prefix("heading"), quote: () => prefix("quote"),
+    heading, quote: () => prefix("quote"),
     list: () => prefix("list"), numbered: () => prefix("numbered"),
   };
   form.querySelectorAll("[data-fmt]").forEach(btn => {
