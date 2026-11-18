@@ -1,7 +1,21 @@
 # Lodge wiki: replacing DokuWiki
 
-Plan for a custom wiki for the Chaser's Lodge group, replacing the current DokuWiki in `../public_html`.
+Plan for a custom wiki for the Chasers' Lodge group, replacing the current DokuWiki in `../public_html`.
 Written 2026-11-17, from the live site synced into `../public_html` that day.
+
+**The sections up to "Repositories" are the original plan**, kept for its reasoning. Several parts were built differently; [DECISIONS.md](DECISIONS.md) says why, and the [README](README.md) and [user guide](docs/guide.md) describe what exists. The main differences:
+
+| The plan said | What was built |
+| --- | --- |
+| SQLite index cache (FTS5) | An in-memory index built from the files and git history at start-up (fast enough for ~1,200 pages); no database |
+| Media stored by content hash | Media under `_media/` mirroring the page folders, with a hash manifest (`_config/media.json`) committed in git |
+| Frontmatter; wiki-links `[[page]]`; `:::` directives | Plain CommonMark + GFM with standard links; only `list` and `widget` fenced blocks are added. No frontmatter |
+| pandoc for the conversion | A Go converter (`migrate/`), with hand fixes listed in its report |
+| Discord login, one local admin | Password accounts imported from DokuWiki; Discord login is still on the to-do list |
+| Routes `/raw`, `/list`, `/history` | `/_/raw`, `/_/list`, `/_/log` (all special routes live under `/_/`) |
+| `git merge-file` on conflicting saves | A save based on an old revision is refused and the editor shows both versions |
+| Push after every commit | `--sync`: push, and merge what was pushed from elsewhere (the wiki's version wins a conflict) |
+| `/healthz` | Not built: the deploy script checks the login page answers |
 
 This is not a generic wiki product. It is built for this group and lives next to its data.
 
@@ -227,11 +241,11 @@ Each phase ends in something usable, and at a gate where you decide whether to c
 
 | Phase | State |
 | --- | --- |
-| 1. Read-only core | Done: rendering shaped like DokuWiki's HTML, namespace layouts (`lodge`, `skarnholm`), TOC, listings, search, recent changes, scaled images. |
-| 2. Importer | Done: 1,229 pages + 11,775 history commits; conversion leftovers and the markdown-plugin pages fixed. See `migrate/REPORT.md`. |
-| 3. Editing | Done: highlighted editor with preview, conflict handling, history, diff, restore, new page, rename/move of pages, folders and media with link rewriting, Files view, uploads, accounts (imported with passwords, users and account pages). |
-| 4. Widgets | Done: map, calendar (with add-event form), stats. Data files editable in the browser. |
-| 5. Switch-over | Not started. |
+| 1. Read-only core | Done: clean semantic HTML, namespace layouts (`lodge`, `skarnholm`) rewritten in plain CSS, TOC, listings, search, quick jump, recent changes, image layout with scaled copies, the user guide at `/_/help`. |
+| 2. Importer | Done: 1,229 pages + 11,775 history commits; conversion leftovers and the markdown-plugin pages fixed. See `migrate/REPORT.md`; catching up with the live wiki: `migrate/SYNC.md`. |
+| 3. Editing | Done: highlighted editor with preview, links by title, pasted and dropped images, conflict handling, history, diff, restore, new page, delete, rename/move of pages, folders and media with link rewriting, Files view, uploads, accounts (imported with passwords, users and account pages), Discord notifications, sync with GitHub. |
+| 4. Widgets | Done: map, calendar (with add-event form), stats, each documented in its `README.md`. Data files editable in the browser. |
+| 5. Switch-over | Ready to start: `deploy/setup.sh` is tested in a container; catch up with the live wiki, then deploy. |
 
 ## To do
 
@@ -269,4 +283,5 @@ Later:
   - glyphs (`width="40"`/`"45"`, `domination/glyphs/`): leave as HTML, or a small glyph helper later.
 - [ ] **Explore: records from mostly-structured pages.** No page format change: parse the conventions pages already follow (character sheets, items, notices) into records, see how regular they are, and whether a record could drive a fixed layout for its page (or a listing) while the page stays free text. Keeps the wiki's flexibility; exceptions stay plain pages.
 - [ ] **Clean up DokuWiki leftovers in the content**, once the old wiki is retired: the old help pages in `wiki/` (`syntax`, `dokuwiki`, `newlines`, `spoiler-tag`, `welcome`, `orphans`, `stats_script`, `notices-tech`...) and mentions of DokuWiki syntax or plugins elsewhere; point to Help instead.
-- [ ] Ideas that need content edits, once the old wiki is retired: a navigation bar per campaign (`_layout/nav.md`), "recently updated" on campaign home pages (`limit` on `list` blocks), page templates for new logs and stories, character infoboxes.
+- [ ] Ideas that need content edits, once the old wiki is retired: a navigation bar per campaign (`_layout/nav.md`), "recently updated" on campaign home pages (`limit` on `list` blocks), "New log" / "New story" buttons with page templates.
+- [ ] Section editing (an edit link per heading), and "changed since your last visit" on Recent changes.

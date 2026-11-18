@@ -15,3 +15,5 @@ Thumbs.db
 
 # deploy settings of a server
 /deploy/lodge.conf
+# tools installed with npm
+node_modules/
