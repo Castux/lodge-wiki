@@ -22,7 +22,7 @@ func (s *Server) backup(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "could not read the history: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	name := "wiki-backup-" + time.Now().Format("2006-01-02")
+	name := "wiki-backup-" + time.Now().Format("2006-01-02-1504") // the server's local time
 	w.Header().Set("Content-Type", "application/zip")
 	w.Header().Set("Content-Disposition", `attachment; filename="`+name+`.zip"`)
 	zw := zip.NewWriter(w)
