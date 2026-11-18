@@ -211,7 +211,7 @@ MEDIA_HERE=0
 [ -d "$DATA/_media" ] && MEDIA_HERE="$(find "$DATA/_media" -type f -not -path '*/.trash/*' | wc -l)"
 if [ "$MEDIA_HERE" -eq 0 ] && [ "$MEDIA_LISTED" -gt 0 ]; then
   warn "No media yet ($MEDIA_LISTED files listed in _config/media.json). Copy it from your computer:"
-  note "rsync -av --progress lodge-data/_media/ $(hostname -f 2>/dev/null || hostname):$DATA/_media/"
+  note "rsync -av --chmod=D755,F644 --progress lodge-data/_media/ $(hostname -f 2>/dev/null || hostname):$DATA/_media/"
   note "then: sudo chown -R $SERVICE_USER: $DATA/_media && sudo systemctl restart lodge-wiki"
 elif [ "$MEDIA_HERE" -gt 0 ]; then
   note "media: $MEDIA_HERE files"

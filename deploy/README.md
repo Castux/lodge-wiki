@@ -23,7 +23,8 @@
 4. Copy the media from your computer (it is not in git):
 
    ```sh
-   rsync -av --progress lodge-data/_media/ you@server:/srv/lodge/lodge-data/_media/
+   rsync -av --chmod=D755,F644 --progress lodge-data/_media/ you@server:/srv/lodge/lodge-data/_media/
+   # (--chmod: copies from Windows or WSL otherwise arrive as rwxrwxrwx)
    # then on the server:
    sudo chown -R lodge: /srv/lodge/lodge-data/_media && sudo systemctl restart lodge-wiki
    ```
