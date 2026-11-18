@@ -275,9 +275,6 @@ Firehoof is the lodge's horse, ...
 
 On phones, images beside the text are shown on their own line.
 
-Older pages use HTML image tags (`<img src="…" width="300" align="right">`);
-they still work, but please use the forms above for new images.
-
 Sound files can be played in the page:
 
 ```html
