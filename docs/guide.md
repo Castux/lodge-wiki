@@ -93,6 +93,11 @@ The editor has **Write**, **Preview** and **Side by side** tabs.
 <kbd>Ctrl</kbd>+<kbd>S</kbd> saves; the summary line is optional but helps
 others in the history. On a page, <kbd>e</kbd> opens the editor.
 
+What you type is also kept in your browser until you save: if the page is
+reloaded, the browser crashes or the tab is closed, opening the editor
+again brings your text back (with a button to discard it). **Cancel**, or
+following a link away from the editor, discards it.
+
 The small buttons next to the tabs write the Markdown for you, and show
 it: bold and italic (<kbd>Ctrl</kbd>+<kbd>B</kbd>, <kbd>Ctrl</kbd>+<kbd>I</kbd>)
 wrap the selected text, or unwrap it; heading turns the line into a

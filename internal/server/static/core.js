@@ -20,7 +20,7 @@
       javascript: "javascript", json: { name: "javascript", json: true }, css: "css",
       html: "htmlmixed", yaml: "yaml", svg: "xml", text: null,
     };
-    const save = () => { dirty = false; if (cm) cm.save(); form.submit(); };
+    const save = () => { if (cm) cm.save(); form.requestSubmit(); };
     if (window.CodeMirror) {
       // `list` and `widget` blocks hold YAML settings.
       const find = CodeMirror.findModeByName;
@@ -85,8 +85,80 @@
         if ((e.ctrlKey || e.metaKey) && e.key === "s") { e.preventDefault(); save(); }
       });
     }
-    form.addEventListener("submit", () => { dirty = false; });
     window.addEventListener("beforeunload", e => { if (dirty) { e.preventDefault(); e.returnValue = ""; } });
+
+    // Drafts: the text being edited is kept in this browser as it changes,
+    // so a refresh, a crash or a closed tab loses nothing: opening the
+    // editor again brings it back. Saving, Cancel or following a link
+    // discards it. The draft keeps the revision it started from, so if
+    // someone saved meanwhile, saving it shows the usual conflict.
+    const draftKey = "lw-draft:" + location.pathname;
+    const baseInput = form.querySelector('input[name="base"]');
+    const summary = form.querySelector(".lw-summary");
+    const getText = () => cm ? cm.getValue() : text.value;
+    const setText = v => { if (cm) cm.setValue(v); else text.value = v; };
+    const forget = () => localStorage.removeItem(draftKey);
+    let draftTimer = null, leaving = false;
+    const keep = submitted => {
+      clearTimeout(draftTimer);
+      try {
+        localStorage.setItem(draftKey, JSON.stringify({ text: getText(), base: baseInput.value,
+          summary: summary ? summary.value : "", time: Date.now(), submitted }));
+      } catch (e) {} // storage full or disabled: no draft
+    };
+    for (let i = localStorage.length - 1; i >= 0; i--) { // drafts left behind for a month
+      const k = localStorage.key(i);
+      try { if (k.startsWith("lw-draft:") && Date.now() - JSON.parse(localStorage.getItem(k)).time > 30 * 864e5) localStorage.removeItem(k); } catch (e) {}
+    }
+    let draft = null;
+    try { draft = JSON.parse(localStorage.getItem(draftKey)); } catch (e) {}
+    if (draft && !text.readOnly) {
+      if ((draft.submitted && draft.base !== baseInput.value) || draft.text === getText()) {
+        forget(); // saved since, or nothing to bring back
+      } else {
+        const loaded = { text: getText(), base: baseInput.value };
+        setText(draft.text);
+        baseInput.value = draft.base;
+        if (summary && draft.summary) summary.value = draft.summary;
+        dirty = true;
+        const note = document.createElement("p");
+        note.className = "lw-note lw-draft";
+        const mins = Math.round((Date.now() - draft.time) / 6e4);
+        const when = mins < 1 ? "just now" : mins < 60 ? mins + " minute" + (mins > 1 ? "s" : "") + " ago"
+          : mins < 1440 ? Math.round(mins / 60) + " hour" + (mins >= 90 ? "s" : "") + " ago" : "on " + new Date(draft.time).toLocaleDateString();
+        note.textContent = "Your unsaved changes from " + when + " are back. ";
+        const discard = document.createElement("button");
+        discard.type = "button";
+        discard.className = "lw-link";
+        discard.textContent = "Discard them";
+        discard.addEventListener("click", () => {
+          setText(loaded.text);
+          baseInput.value = loaded.base;
+          if (summary) summary.value = "";
+          clearTimeout(draftTimer);
+          forget();
+          dirty = false;
+          note.remove();
+        });
+        note.append(discard);
+        panes.before(note);
+      }
+    }
+    if (!text.readOnly) {
+      const later = () => { leaving = false; clearTimeout(draftTimer); draftTimer = setTimeout(() => keep(false), 400); };
+      text.addEventListener("input", later);
+      if (summary) summary.addEventListener("input", later);
+      form.addEventListener("submit", () => { dirty = false; keep(true); });
+      // Following a link (Cancel, the sidebar...) means leaving the edit;
+      // a refresh, closing the tab or a crash keeps the draft.
+      document.addEventListener("click", e => {
+        const a = e.target.closest && e.target.closest("a[href]");
+        if (a && !a.target && !e.ctrlKey && !e.metaKey && !e.shiftKey && !a.getAttribute("href").startsWith("#")) leaving = true;
+      });
+      window.addEventListener("pagehide", () => { if (leaving) forget(); });
+    } else {
+      form.addEventListener("submit", () => { dirty = false; });
+    }
   }
 
   // Keyboard: Ctrl+K jumps to a page (in the editor it inserts a link
