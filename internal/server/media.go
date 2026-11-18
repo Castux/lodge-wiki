@@ -204,7 +204,7 @@ func mediaNS(ns string) (string, bool) {
 	if strings.Contains(ns, "..") {
 		return "", false
 	}
-	for _, seg := range strings.Split(ns, "/") {
+	for seg := range strings.SplitSeq(ns, "/") {
 		if strings.HasPrefix(seg, ".") || strings.HasPrefix(seg, "_") {
 			return "", false
 		}

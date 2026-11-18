@@ -61,7 +61,7 @@ func main() {
 				fmt.Printf("oldsite\t%s\t%s\n", id, m[1])
 			}
 		}
-		for _, line := range strings.Split(visibleText(html), "\n") {
+		for line := range strings.SplitSeq(visibleText(html), "\n") {
 			for name, re := range leftovers {
 				if (only == "" || only == name) && re.MatchString(line) {
 					l := line

@@ -1,6 +1,6 @@
 module github.com/Castux/lodge-wiki
 
-go 1.26.0
+go 1.27.4
 
 require (
 	github.com/yuin/goldmark v1.8.7

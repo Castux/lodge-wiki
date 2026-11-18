@@ -173,7 +173,7 @@ func (g *Git) Recent(limit int) ([]Revision, [][]string, error) {
 	}
 	var revs []Revision
 	var files [][]string
-	for _, block := range strings.Split(string(out), "\x01") {
+	for block := range strings.SplitSeq(string(out), "\x01") {
 		block = strings.TrimSpace(block)
 		if block == "" {
 			continue
@@ -197,7 +197,7 @@ func (g *Git) Recent(limit int) ([]Revision, [][]string, error) {
 
 func parseRevs(out []byte) []Revision {
 	var revs []Revision
-	for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
+	for line := range strings.SplitSeq(strings.TrimSpace(string(out)), "\n") {
 		p := strings.SplitN(line, "\x02", 4)
 		if len(p) < 4 {
 			continue
@@ -389,7 +389,7 @@ func (g *Git) LogAll(since time.Time) ([]Commit, error) {
 		return nil, err
 	}
 	var res []Commit
-	for _, block := range strings.Split(string(out), "\x01") {
+	for block := range strings.SplitSeq(string(out), "\x01") {
 		lines := strings.Split(strings.TrimSpace(block), "\n")
 		if len(lines) == 0 || lines[0] == "" {
 			continue

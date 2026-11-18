@@ -149,7 +149,7 @@ func (g *Git) mergeUpstream() (changed, overridden []string, err error) {
 
 func lines(b []byte) []string {
 	var out []string
-	for _, l := range strings.Split(string(b), "\n") {
+	for l := range strings.SplitSeq(string(b), "\n") {
 		if l = strings.TrimSpace(l); l != "" {
 			out = append(out, l)
 		}

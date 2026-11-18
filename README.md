@@ -12,7 +12,7 @@ Built for this group, not as a generic product. The rule: anything generic is co
 
 ## Run it
 
-Needs Go 1.26+ (the version in `go.mod`) and `git` on the PATH.
+Needs Go 1.27+ (the version in `go.mod`) and `git` on the PATH.
 
 ```sh
 go run . --root ../lodge-data

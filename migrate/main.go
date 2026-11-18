@@ -95,7 +95,7 @@ func main() {
 	// --pages: re-convert only these pages into --out, touching nothing
 	// else (used for ad hoc fixes after lodge-data became the source).
 	if *pages != "" {
-		for _, id := range strings.Split(*pages, ",") {
+		for id := range strings.SplitSeq(*pages, ",") {
 			id = strings.TrimSpace(id)
 			text, ok := current[id]
 			if !ok {

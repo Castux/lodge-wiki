@@ -148,7 +148,7 @@ func (s *Server) page(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	for _, seg := range strings.Split(strings.Trim(p, "/"), "/") {
+	for seg := range strings.SplitSeq(strings.Trim(p, "/"), "/") {
 		if seg == "_layout" || seg == "_widgets" {
 			s.repoFile(w, r)
 			return

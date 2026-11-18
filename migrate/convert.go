@@ -247,10 +247,7 @@ func (c *conv) blocks(lines []string) string {
 
 		if m := reHeading.FindStringSubmatch(line); m != nil {
 			flush()
-			n := len(m[1])
-			if n > 6 {
-				n = 6
-			}
+			n := min(len(m[1]), 6)
 			level := 7 - n
 			emit("", strings.Repeat("#", level)+" "+escapeText(m[2], false), "")
 			continue
@@ -388,7 +385,7 @@ var reClassTok = regexp.MustCompile(`^[A-Za-z0-9_-]+$`)
 func wrapDiv(args string) string {
 	var classes []string
 	var style string
-	for _, f := range strings.Fields(args) {
+	for f := range strings.FieldsSeq(args) {
 		switch {
 		case strings.HasSuffix(f, "%") || strings.HasSuffix(f, "px") || strings.HasSuffix(f, "em"):
 			style = "width: " + f
@@ -454,13 +451,7 @@ func (c *conv) list(items []string) []string {
 	for _, l := range items {
 		m := reList.FindStringSubmatch(l)
 		ws := strings.ReplaceAll(m[1], "\t", "  ")
-		depth := len(ws) / 2
-		if depth < 1 {
-			depth = 1
-		}
-		if depth > prevDepth+1 {
-			depth = prevDepth + 1
-		}
+		depth := min(max(len(ws)/2, 1), prevDepth+1)
 		prevDepth = depth
 		marker := "- "
 		if m[2] == "-" {

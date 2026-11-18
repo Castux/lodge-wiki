@@ -189,8 +189,8 @@ func (s *Server) planFolder(from, to string, withMedia bool) (*movePlan, error) 
 		rel = filepath.ToSlash(rel)
 		nu := to + strings.TrimPrefix(rel, from)
 		items = append(items, item{rel, nu})
-		if strings.HasSuffix(rel, ".md") {
-			p.pages[strings.TrimSuffix(rel, ".md")] = strings.TrimSuffix(nu, ".md")
+		if before, ok := strings.CutSuffix(rel, ".md"); ok {
+			p.pages[before] = strings.TrimSuffix(nu, ".md")
 		}
 		return nil
 	})
@@ -211,8 +211,8 @@ func (s *Server) planFolder(from, to string, withMedia bool) (*movePlan, error) 
 		if err != nil {
 			return nil, err
 		}
-		if strings.HasSuffix(it.rel, ".md") {
-			raw = rewriteRefs(strings.TrimSuffix(it.rel, ".md"), raw, p.pages, true, p.mediaOld, p.mediaNew)
+		if before, ok := strings.CutSuffix(it.rel, ".md"); ok {
+			raw = rewriteRefs(before, raw, p.pages, true, p.mediaOld, p.mediaNew)
 		}
 		p.files[it.rel] = nil
 		p.files[it.nu] = raw
@@ -245,7 +245,7 @@ func cleanPath(p string) string {
 		ext, p = strings.ToLower(e), strings.TrimSuffix(p, e)
 	}
 	var segs []string
-	for _, seg := range strings.Split(p, "/") {
+	for seg := range strings.SplitSeq(p, "/") {
 		if c := wiki.CleanID(seg); c != "" {
 			segs = append(segs, c)
 		}

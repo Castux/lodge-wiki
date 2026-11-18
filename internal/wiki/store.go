@@ -283,8 +283,8 @@ func (idx *Index) Children(ns string) (pages []*PageInfo, subns []string) {
 			continue
 		}
 		rest := id[len(prefix):]
-		if i := strings.IndexByte(rest, '/'); i >= 0 {
-			sub := prefix + rest[:i]
+		if before, _, ok := strings.Cut(rest, "/"); ok {
+			sub := prefix + before
 			if !seen[sub] {
 				seen[sub] = true
 				subns = append(subns, sub)

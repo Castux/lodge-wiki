@@ -54,7 +54,7 @@ func LinkTarget(from, href string) (id, fragment string, ok bool) {
 			p += "/"
 		}
 	}
-	for _, seg := range strings.Split(strings.Trim(p, "/"), "/") {
+	for seg := range strings.SplitSeq(strings.Trim(p, "/"), "/") {
 		if strings.HasPrefix(seg, "_") {
 			return "", "", false
 		}
@@ -86,7 +86,7 @@ func scanLinks(id string, body []byte) (links []string, image string) {
 		}
 	}
 	inFence := false
-	for _, line := range strings.Split(string(body), "\n") {
+	for line := range strings.SplitSeq(string(body), "\n") {
 		if fenceLine.MatchString(line) {
 			inFence = !inFence
 			continue

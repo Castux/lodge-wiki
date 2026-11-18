@@ -155,7 +155,7 @@ func (c *conv) inline(s string, inTable bool) string {
 			if j := strings.Index(rest, "</wrap>"); j >= 0 {
 				flush()
 				var classes []string
-				for _, f := range strings.Fields(m[1]) {
+				for f := range strings.FieldsSeq(m[1]) {
 					if reClassTok.MatchString(f) {
 						classes = append(classes, strings.ToLower(f))
 					}
@@ -436,8 +436,7 @@ func (c *conv) resolvePage(target string) string {
 	if c.site.exists(id + "/" + wiki.StartPage) {
 		return id + "/" + wiki.StartPage
 	}
-	if strings.HasSuffix(id, "/"+wiki.StartPage) {
-		parent := strings.TrimSuffix(id, "/"+wiki.StartPage)
+	if parent, ok := strings.CutSuffix(id, "/"+wiki.StartPage); ok {
 		if c.site.exists(parent + "/" + wiki.Name(parent)) {
 			return parent + "/" + wiki.Name(parent)
 		}
@@ -679,7 +678,7 @@ func (c *conv) oldSiteID(u string) (string, string, bool) {
 	case strings.HasPrefix(p, "doku.php?"):
 		q := p[len("doku.php?"):]
 		p = ""
-		for _, kv := range strings.Split(q, "&") {
+		for kv := range strings.SplitSeq(q, "&") {
 			if v, ok := strings.CutPrefix(kv, "id="); ok {
 				p = v
 			}

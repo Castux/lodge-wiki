@@ -4,6 +4,7 @@ import (
 	"io/fs"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -47,7 +48,7 @@ func newRecovery(data string, changes []change, current map[string]string) *reco
 		return nil
 	})
 	for _, list := range r.attic {
-		sort.Slice(list, func(i, j int) bool { return list[i] < list[j] })
+		slices.Sort(list)
 	}
 	for _, ch := range changes {
 		if m := reMoved.FindStringSubmatch(ch.summary); m != nil {
@@ -103,8 +104,8 @@ func (r *recovery) recover(path string, ts int64, _ int) (string, bool) {
 		}
 	}
 	// 4. The current text at the end of the chain.
-	for i := len(chain) - 1; i >= 0; i-- {
-		if t, ok := r.current[chain[i]]; ok {
+	for _, c := range slices.Backward(chain) {
+		if t, ok := r.current[c]; ok {
 			return t, true
 		}
 	}

@@ -96,7 +96,7 @@ func (c *conv) mixedDokuWiki(s string) string {
 	s = reDWMedia.ReplaceAllStringFunc(s, func(m string) string { return c.media(m[2 : len(m)-2]) })
 	s = reDWWrap.ReplaceAllStringFunc(s, func(m string) string {
 		var classes []string
-		for _, f := range strings.Fields(reDWWrap.FindStringSubmatch(m)[1]) {
+		for f := range strings.FieldsSeq(reDWWrap.FindStringSubmatch(m)[1]) {
 			if reClassTok.MatchString(f) {
 				classes = append(classes, strings.ToLower(f))
 			}

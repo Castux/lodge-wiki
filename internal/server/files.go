@@ -6,6 +6,7 @@ import (
 	"errors"
 	"html/template"
 	"log"
+	"maps"
 	"net/http"
 	"net/url"
 	"os"
@@ -204,9 +205,7 @@ func (s *Server) save(w http.ResponseWriter, r *http.Request) {
 	again := func(status int, extra map[string]any) {
 		d := s.editData(id, text, r.FormValue("base"), true)
 		d["Summary"] = summary
-		for k, v := range extra {
-			d[k] = v
-		}
+		maps.Copy(d, extra)
 		s.show(w, r, &View{ID: id, Title: "Editing " + file, Mode: "edit", Exists: true, Status: status, Content: s.ui_("edit.html", d)})
 	}
 	if content != nil {
@@ -225,8 +224,7 @@ func (s *Server) save(w http.ResponseWriter, r *http.Request) {
 	}
 	before := s.store.Index().Pages[id]
 	_, err := s.store.Git.Write(file, content, r.FormValue("base"), s.user(r), msg)
-	var conflict *wiki.ConflictError
-	if errors.As(err, &conflict) {
+	if conflict, ok := errors.AsType[*wiki.ConflictError](err); ok {
 		theirs, _ := os.ReadFile(s.store.File(file))
 		again(http.StatusConflict, map[string]any{"Base": conflict.Current, "Conflict": string(theirs)})
 		return
@@ -347,7 +345,7 @@ func (s *Server) files(w http.ResponseWriter, r *http.Request) {
 	})
 	var crumbs []Crumb
 	acc := ""
-	for _, seg := range strings.Split(dir, "/") {
+	for seg := range strings.SplitSeq(dir, "/") {
 		if seg == "" {
 			continue
 		}
@@ -375,7 +373,7 @@ func (s *Server) newFile(w http.ResponseWriter, r *http.Request) {
 	base := strings.TrimSuffix(name, path.Ext(name))
 	// Clean each folder level, keeping a leading "_" (_layout, _widgets).
 	var segs []string
-	for _, seg := range strings.Split(strings.ReplaceAll(base, "\\", "/"), "/") {
+	for seg := range strings.SplitSeq(strings.ReplaceAll(base, "\\", "/"), "/") {
 		c := wiki.CleanID(seg)
 		if c == "" {
 			continue
@@ -413,7 +411,7 @@ func (s *Server) createForm(w http.ResponseWriter, r *http.Request) {
 	title := strings.TrimSpace(r.URL.Query().Get("title"))
 	if title != "" {
 		var segs []string
-		for _, seg := range strings.Split(ns, "/") {
+		for seg := range strings.SplitSeq(ns, "/") {
 			if c := wiki.CleanID(seg); c != "" {
 				segs = append(segs, c)
 			}

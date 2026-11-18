@@ -100,7 +100,7 @@ func (s *Server) diff(w http.ResponseWriter, r *http.Request) {
 	}
 	var lines []DiffLine
 	started := false
-	for _, l := range strings.Split(out, "\n") {
+	for l := range strings.SplitSeq(out, "\n") {
 		switch {
 		case strings.HasPrefix(l, "@@"):
 			started = true
@@ -285,10 +285,7 @@ func plainText(s string) string {
 
 func snippet(text, word string) string {
 	text = plainText(text)
-	i := strings.Index(text, word)
-	if i < 0 {
-		i = 0
-	}
+	i := max(strings.Index(text, word), 0)
 	lo, hi := max(0, i-80), min(len(text), i+120)
 	for lo > 0 && lo < len(text) && text[lo]&0xC0 == 0x80 {
 		lo--
@@ -410,8 +407,7 @@ func (s *Server) rawPut(w http.ResponseWriter, r *http.Request) {
 	pageID := strings.TrimSuffix(p, ".md")
 	before := s.store.Index().Pages[pageID]
 	rev, err := s.store.Git.Write(p, body, base, s.user(r), msg)
-	var conflict *wiki.ConflictError
-	if errors.As(err, &conflict) {
+	if conflict, ok := errors.AsType[*wiki.ConflictError](err); ok {
 		w.Header().Set("X-Revision", conflict.Current)
 		http.Error(w, "conflict: the file changed since your revision", http.StatusConflict)
 		return
