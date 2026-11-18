@@ -83,6 +83,7 @@ type blockRenderer struct{ pc *pageCtx }
 func (b *blockRenderer) RegisterFuncs(reg renderer.NodeRendererFuncRegisterer) {
 	reg.Register(ast.KindFencedCodeBlock, b.fenced)
 	reg.Register(ast.KindCodeBlock, b.indented)
+	reg.Register(ast.KindParagraph, b.paragraph)
 }
 
 func codeText(n ast.Node, src []byte) string {

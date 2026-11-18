@@ -95,3 +95,28 @@ func TestNaturalLess(t *testing.T) {
 		t.Error("natural order")
 	}
 }
+
+func TestImageLayout(t *testing.T) {
+	s := testStore(t, nil)
+	cases := []struct{ in, want string }{
+		// alone: a picture paragraph, capped width
+		{"![Marak](/_media/a/marak.jpg)", `<p class="pic"><a href="/_media/a/marak.jpg" class="image" target="_blank"><img src="/_media/a/marak.jpg?w=800" alt="Marak" loading="lazy"></a></p>`},
+		// presets in the fragment become classes and a matching size
+		{"![Crest](/_media/a/crest.png#small-right)", `<img src="/_media/a/crest.png?w=200" alt="Crest" loading="lazy" class="small right">`},
+		{"![M](/_media/a/m.jpg#medium)", `<img src="/_media/a/m.jpg?w=400" alt="M" loading="lazy" class="medium">`},
+		// not a preset: no class (the fragment means nothing on an image)
+		{"![M](/_media/a/m.jpg#top)", `<img src="/_media/a/m.jpg?w=800" alt="M" loading="lazy">`},
+		// a title makes a figure with a caption
+		{`![Marak](/_media/a/marak.jpg "Marak at the siege")`, `<figure><a href="/_media/a/marak.jpg" class="image" target="_blank"><img src="/_media/a/marak.jpg?w=800" alt="Marak" loading="lazy"></a><figcaption>Marak at the siege</figcaption></figure>`},
+		// images only: a gallery
+		{"![A](/_media/a/1.jpg)\n![B](/_media/a/2.jpg)", `<p class="gallery">`},
+		// with text: a plain paragraph
+		{"Text ![A](/_media/a/1.jpg#right) more", `<p>Text <a`},
+		// explicit HTML sizes still win; svg is never scaled
+		{`<img src="/_media/a/g.png" width="40" align="left">`, `src="/_media/a/g.png?w=40"`},
+		{"![S](/_media/a/s.svg)", `src="/_media/a/s.svg"`},
+	}
+	for _, c := range cases {
+		contains(t, render(t, s, "a", c.in+"\n").HTML, c.want)
+	}
+}

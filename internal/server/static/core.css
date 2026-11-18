@@ -105,3 +105,31 @@ pre.lw-diff span { display: block; padding: 0 .4em; min-height: 1.45em; }
 /* Files maintained by the server */
 .lw-warning { padding: .6em 1em; margin: 0 0 .8em; border-left: 4px solid #c60; background: #fff4e5; }
 .lw-badge { display: inline-block; font-size: .8em; padding: 0 .5em; border-radius: 3px; background: #f3e3c3; color: #6b4a10; }
+
+/* ---------- Page images (docs/guide.md, "Images and other files") ----------
+   The renderer marks an image alone in its paragraph (p.pic), an image
+   with a caption (figure), images side by side (p.gallery), and the
+   presets from the address (#small, #medium, #full, #left, #right).
+   Zero specificity (:where), so layouts can restyle any of it. */
+:where(.page) :where(p.pic) { text-align: center; }
+:where(.page) :where(p.pic, figure) img, :where(.page) img:where(.center):where(:not([width])) { width: auto; max-height: 32rem; }
+:where(.page) img:where(.left, .right):where(:not(.small, .medium, [width])) { max-width: 40%; }
+:where(.page) img:where(.small) { width: 200px; }
+:where(.page) img:where(.medium) { width: 400px; }
+:where(.page) img:where(.full) { width: 100%; max-height: none; }
+:where(.page) img:where(.right) { float: right; margin: .3rem 0 1rem 1.25rem; }
+:where(.page) img:where(.left) { float: left; margin: .3rem 1.25rem 1rem 0; }
+:where(.page) figure { margin: 0 0 1.1rem; text-align: center; }
+:where(.page) figcaption { font-size: .9em; font-style: italic; margin-top: .3rem; opacity: .85; }
+:where(.page) figure:where(:has(img.right)) { float: right; max-width: 40%; margin: .3rem 0 1rem 1.25rem; }
+:where(.page) figure:where(:has(img.left)) { float: left; max-width: 40%; margin: .3rem 1.25rem 1rem 0; }
+:where(.page) figure:where(:has(img.left, img.right)) img { float: none; margin: 0; max-width: 100%; }
+:where(.page) :where(p.gallery) { display: grid; grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr)); gap: .5rem; }
+:where(.page) :where(p.gallery) img { display: block; width: 100%; height: 12rem; max-height: none; object-fit: cover; }
+@media (max-width: 600px) {
+  :where(.page) img:where(.left, .right), :where(.page) figure:where(:has(img.left, img.right)) {
+    float: none; display: block; max-width: 100%; margin: 0 auto 1rem;
+  }
+  :where(.page) :where(p.gallery) { grid-template-columns: repeat(auto-fill, minmax(7rem, 1fr)); }
+  :where(.page) :where(p.gallery) img { height: 8rem; }
+}

@@ -115,10 +115,21 @@
   const msg = box.querySelector(".lw-media-msg");
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
 
+  // Images get the chosen layout preset (#small-right) and caption (the
+  // markdown title); see docs/guide.md.
+  const sizeSel = box.querySelector(".lw-media-size");
+  const sideSel = box.querySelector(".lw-media-side");
+  const caption = box.querySelector(".lw-media-caption");
   function insert(file) {
+    if (!file.image) {
+      window.lwInsert(`[${file.name}](${file.url})`);
+      return;
+    }
     const alt = file.name.replace(/\.[^.]+$/, "").replace(/[-_]/g, " ");
-    const snippet = file.image ? `![${alt}](${file.url})` : `[${file.name}](${file.url})`;
-    window.lwInsert(snippet);
+    const preset = [sizeSel.value, sideSel.value].filter(Boolean).join("-");
+    const cap = caption.value.trim().replace(/"/g, "'");
+    window.lwInsert(`![${alt}](${file.url}${preset ? "#" + preset : ""}${cap ? ` "${cap}"` : ""})`);
+    caption.value = "";
   }
 
   async function load() {

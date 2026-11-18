@@ -204,7 +204,8 @@ mirror the page folders: `/_media/foolslanding/map.jpg`.
 
 In the editor, **Images…** shows the files of the page's folder: click one
 to insert it, or **Upload…** a new one (jpg, png, gif, webp, svg, pdf, mp3,
-wav, ogg, m4a, txt; up to 64 MB). Pasting this works as well:
+wav, ogg, m4a, txt; up to 64 MB). The size, placement and caption chosen
+above the files are written into the inserted image. Typing works as well:
 
 ```markdown
 ![The coast, seen from the tower](/_media/foolslanding/map.jpg)
@@ -214,22 +215,52 @@ wav, ogg, m4a, txt; up to 64 MB). Pasting this works as well:
 The text in square brackets describes the image for people who cannot see
 it. Clicking an image opens it full size.
 
-For **size and placement**, use an HTML image tag instead:
+**The wiki lays images out for you**, so that pages look alike:
 
-```html
-<img src="/_media/foolslanding/map.jpg" width="300" align="right" alt="Map">
+- An image **alone on its line** is centred and as wide as the text, but
+  never very tall: portraits are shown at a reasonable height. Small
+  images are not enlarged.
+- An image **with a caption** (text in quotes after the address) is shown
+  with the caption underneath:
+
+  ```markdown
+  ![Marak](/_media/foolslanding/marak.jpg "Marak at the siege")
+  ```
+
+- **Several images together**, on consecutive lines with nothing else, form
+  a gallery of equal tiles (each picture is cropped to fit; click it to see
+  it whole):
+
+  ```markdown
+  ![The lodge](/_media/foolslanding/lodge.jpg)
+  ![The hag](/_media/foolslanding/hag.jpg)
+  ![The gobliner](/_media/foolslanding/gobliner.jpg)
+  ```
+
+- An image at the very top of a page, right before the title, is shown as
+  a wide **banner** with the title over its lower edge (unless it has a
+  size or a side).
+
+To change the **size** or put the image **beside the text**, add one of
+these words after a `#` at the end of the address (two can be combined
+with `-`, for example `#small-right`):
+
+| Word | Effect |
+| --- | --- |
+| `small` | small (about a fifth of the text's width) |
+| `medium` | medium (about half) |
+| `full` | the full width of the text, however tall |
+| `right`, `left` | beside the text, on that side (at most 40% of the width unless `small` or `medium`); put the image just before the paragraph it goes with |
+
+```markdown
+![Firehoof](/_media/foolslanding/firehoof.png#small-right)
+Firehoof is the lodge's horse, ...
 ```
 
-| Attribute | Effect |
-| --- | --- |
-| `width="300"` or `height="200"` | display size in pixels; the wiki sends a scaled-down copy, so big photos load fast |
-| `align="right"` / `align="left"` | float the image beside the text |
-| `align="center"` | centre it on its own line |
-| `alt="..."` | the description |
+On phones, images beside the text are shown on their own line.
 
-An image alone at the very top of a page, right before the title and
-without a size or alignment, is shown as a wide **banner** with the title
-over its lower edge.
+Older pages use HTML image tags (`<img src="…" width="300" align="right">`);
+they still work, but please use the forms above for new images.
 
 Sound files can be played in the page:
 

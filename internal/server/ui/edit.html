@@ -26,6 +26,17 @@
       <label class="lw-button">Upload… <input type="file" class="lw-media-file" hidden multiple></label>
       <span class="lw-media-msg lw-quiet">Click an image to insert it at the cursor.</span>
     </div>
+    <div class="lw-media-bar lw-media-opts">
+      <span>Images:
+        <select class="lw-media-size" title="Size">
+          <option value="">normal size</option><option value="small">small</option><option value="medium">medium</option><option value="full">full width</option>
+        </select>
+        <select class="lw-media-side" title="Placement">
+          <option value="">on its own line</option><option value="right">beside the text, right</option><option value="left">beside the text, left</option>
+        </select>
+        <input class="lw-media-caption" placeholder="caption (optional)" size="24">
+      </span>
+    </div>
     <div class="lw-media-list"></div>
   </div>{{end}}
   <div class="lw-editor-panes lw-mode-write">

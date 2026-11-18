@@ -118,6 +118,7 @@ func (pc *pageCtx) renderList(body string) string {
 				fmt.Fprintf(&b, `<a href="%s" class="no-picture">%s</a>`, html.EscapeString(wiki.PageURL(it.id)), html.EscapeString(it.title))
 				continue
 			}
+			img, _, _ = strings.Cut(img, "#")
 			if !strings.Contains(img, "?") {
 				img += "?w=200"
 			}

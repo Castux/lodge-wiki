@@ -71,6 +71,16 @@ func addClass(t *nethtml.Token, cls string) {
 	}
 }
 
+func hasClass(t *nethtml.Token, cls string) bool {
+	c, _ := attr(t, "class")
+	for _, f := range strings.Fields(c) {
+		if f == cls {
+			return true
+		}
+	}
+	return false
+}
+
 // postProcess finishes goldmark's HTML: heading ids, link classes
 // (missing pages, external sites), scaled and linked images, scrollable
 // tables. It returns the headings found at the top level, for the TOC.
@@ -224,8 +234,17 @@ func fixLink(pageID string, t *nethtml.Token, store *wiki.Store) {
 	}
 }
 
-// fixImage turns align into a class (left, right, center), lazy-loads
-// the image and asks the server for a scaled copy when a size is given.
+// Widths (CSS pixels) asked of the server for scaled copies (it sends
+// twice as many pixels, for sharp images on high-density screens):
+// the size presets, and a cap for images shown at the column's width.
+var presetWidths = map[string]string{"small": "200", "medium": "400"}
+
+const maxImageWidth = "800"
+
+// fixImage turns align into a class (left, right, center), turns a
+// layout preset in the fragment (#small-right) into classes, lazy-loads
+// the image and asks the server for a scaled copy: of the given size,
+// of the preset's size, or capped at the column's width.
 func fixImage(t *nethtml.Token) {
 	if a, ok := attr(t, "align"); ok {
 		switch strings.ToLower(a) {
@@ -240,7 +259,17 @@ func fixImage(t *nethtml.Token) {
 		setAttr(t, "loading", "lazy")
 	}
 	u, err := url.Parse(attrOr(t, "src"))
-	if err != nil || u.RawQuery != "" {
+	if err != nil {
+		return
+	}
+	if classes, ok := presetClasses(u.Fragment); ok {
+		for _, c := range classes {
+			addClass(t, c)
+		}
+		u.Fragment = ""
+		setAttr(t, "src", u.String())
+	}
+	if u.RawQuery != "" || !isRaster(u.Path) {
 		return
 	}
 	q := url.Values{}
@@ -250,9 +279,16 @@ func fixImage(t *nethtml.Token) {
 	if h, ok := attr(t, "height"); ok && isNum(h) {
 		q.Set("h", h)
 	}
-	if len(q) > 0 && isRaster(u.Path) {
-		setAttr(t, "src", u.Path+"?"+q.Encode())
+	if len(q) == 0 {
+		w := maxImageWidth
+		for c, pw := range presetWidths {
+			if hasClass(t, c) {
+				w = pw
+			}
+		}
+		q.Set("w", w)
 	}
+	setAttr(t, "src", u.Path+"?"+q.Encode())
 }
 
 func isNum(s string) bool {
