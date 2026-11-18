@@ -117,7 +117,16 @@ func (s *Server) routes() {
 	m.Handle("GET /_/log", s.need(RoleReader, s.logJSON))
 	m.Handle("GET /_/media", s.need(RoleReader, s.mediaList))
 	m.Handle("POST /_/media", s.need(RoleEditor, s.mediaUpload))
-	m.Handle("GET /", s.need(RoleReader, s.page))
+	pages := s.need(RoleReader, s.page)
+	m.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
+		// The look (_layout: CSS, fonts, images) is served to everyone, so
+		// the login page of a private wiki is styled too. It holds no content.
+		if isLayoutPath(r.URL.Path) {
+			s.repoFile(w, r)
+			return
+		}
+		pages.ServeHTTP(w, r)
+	})
 	// Cross-site requests (a form on another site posting here with the
 	// visitor's cookie) are refused for every method that changes
 	// something; the browser's own headers say where a request comes from.
@@ -197,6 +206,22 @@ func (s *Server) page(w http.ResponseWriter, r *http.Request) {
 	v := &View{ID: id, Title: pg.Title, Mode: "show", Exists: true,
 		Content: template.HTML(res.HTML), TOC: template.HTML(res.TOC), Widgets: res.Widgets}
 	s.show(w, r, v)
+}
+
+// isLayoutPath reports whether a URL path is inside a _layout folder
+// (/_layout/style.css, /ns/_layout/banner.jpg), with no hidden or other
+// underscore segment on the way.
+func isLayoutPath(p string) bool {
+	segs := strings.Split(strings.Trim(p, "/"), "/")
+	for i, seg := range segs {
+		if seg == "_layout" {
+			return i < len(segs)-1
+		}
+		if strings.HasPrefix(seg, "_") || strings.HasPrefix(seg, ".") || seg == "" {
+			return false
+		}
+	}
+	return false
 }
 
 // repoFile serves static files from _layout and _widgets folders.

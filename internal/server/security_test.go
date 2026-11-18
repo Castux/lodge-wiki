@@ -141,6 +141,29 @@ func TestRawAndMediaPaths(t *testing.T) {
 	}
 }
 
+// Logged out, a private wiki serves its look (so the login page is styled)
+// and nothing else.
+func TestLayoutPublic(t *testing.T) {
+	srv, root, _ := testWiki(t, "")
+	os.MkdirAll(filepath.Join(root, "_layout"), 0o755)
+	os.WriteFile(filepath.Join(root, "_layout", "style.css"), []byte("body{}"), 0o644)
+	os.MkdirAll(filepath.Join(root, "_widgets", "w"), 0o755)
+	os.WriteFile(filepath.Join(root, "_widgets", "w", "w.js"), []byte("//"), 0o644)
+	if w := do(srv, "GET", "/_layout/style.css", nil, nil); w.Code != http.StatusOK {
+		t.Errorf("layout: status %d, want 200", w.Code)
+	}
+	if w := do(srv, "GET", "/_/login", nil, nil); w.Code != http.StatusOK {
+		t.Errorf("login page: status %d", w.Code)
+	}
+	for _, target := range []string{"/start", "/", "/_widgets/w/w.js", "/_layout/../_config/users.json",
+		"/_config/_layout/x", "/a/_layout", "/_media/a/pic.png", "/_/raw/start.md"} {
+		w := do(srv, "GET", target, nil, nil)
+		if w.Code == http.StatusOK || strings.Contains(w.Body.String(), "secrethash") {
+			t.Errorf("%s: status %d while logged out", target, w.Code)
+		}
+	}
+}
+
 // A form posted from another site with the visitor's cookie is refused.
 func TestCrossOriginRefused(t *testing.T) {
 	srv, _, _ := testWiki(t, "editor")
