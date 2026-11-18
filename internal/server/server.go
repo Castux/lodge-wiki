@@ -295,7 +295,11 @@ func (s *Server) need(role Role, h http.HandlerFunc) http.Handler {
 
 // idFrom extracts the page id after a route prefix like /_/edit/.
 func idFrom(r *http.Request, prefix string) string {
-	return wiki.IDFromURL(strings.TrimPrefix(r.URL.Path, prefix))
+	id := wiki.IDFromURL(strings.TrimPrefix(r.URL.Path, prefix))
+	if inSpecialFolder(id) && path.Ext(id) == "" {
+		id += ".md" // Markdown in a _ folder is a file, not a page (see isFile)
+	}
+	return id
 }
 
 func exists(p string) bool {

@@ -208,6 +208,13 @@ func TestSidebar(t *testing.T) {
 	if body := do(srv, "GET", "/camp/a", nil, nil).Body.String(); strings.Contains(body, "Wiki help") {
 		t.Error("/camp/a: got the root sidebar too")
 	}
+	// Editing a sidebar goes back to Files, with or without ".md".
+	for _, u := range []string{"/_/edit/camp/_layout/sidebar.md", "/_/edit/camp/_layout/sidebar"} {
+		r := httptest.NewRequest("GET", u, nil)
+		if id := idFrom(r, "/_/edit/"); id != "camp/_layout/sidebar.md" || !isFile(id) {
+			t.Errorf("%s: id %q", u, id)
+		}
+	}
 	// Markdown in "_" folders is a file to edit in Files, not a page.
 	for id, want := range map[string]bool{"_layout/sidebar.md": true, "camp/_layout/sidebar.md": true,
 		"_widgets/map/README.md": true, "camp/a": false, "camp/a.md": false, "camp/data.json": true} {
