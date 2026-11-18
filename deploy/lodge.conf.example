@@ -4,6 +4,8 @@
 
 # Public address of the wiki. Caddy gets an HTTPS certificate for it
 # automatically; its DNS record must point at this server.
+# Several names: separate them with commas, e.g.
+#   DOMAIN="example.org, www.example.org, me.ddns.net"
 # Leave empty to skip Caddy (the wiki then only listens on LISTEN).
 DOMAIN=wiki.example.org
 
