@@ -8,7 +8,9 @@
 DOMAIN=wiki.example.org
 
 # The content repository. The server clones it over SSH with its own deploy
-# key (the script prints it), and syncs with it when SYNC=yes.
+# key, and syncs with it when SYNC=yes. If you are logged in to the GitHub
+# CLI (gh), the script adds that key to the repo; otherwise it prints it.
+# (An https://github.com/... address is turned into the SSH one.)
 # Leave empty to start a new, empty wiki.
 DATA_REPO=git@github.com:Castux/lodge-data.git
 

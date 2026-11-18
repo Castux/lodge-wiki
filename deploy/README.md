@@ -8,14 +8,18 @@
 2. On the server:
 
    ```sh
-   git clone https://github.com/Castux/lodge-wiki.git
+   gh repo clone Castux/lodge-wiki   # or git clone, with access to the private repo
    cd lodge-wiki
    sudo deploy/setup.sh          # creates deploy/lodge.conf and stops
    nano deploy/lodge.conf        # DOMAIN, DATA_REPO, NOTIFY...
    sudo deploy/setup.sh
    ```
 
-3. The script creates an SSH key for the wiki's service account and stops if it cannot read the data repo. Add the printed key on GitHub (lodge-data → Settings → Deploy keys → Add deploy key, **allow write access**) and run `sudo deploy/setup.sh` again.
+3. The script creates an SSH key for the wiki's service account, which needs read and write access to the data repo:
+   - If you are logged in to the GitHub CLI (`gh auth login`), the script adds the key to the repo itself as a deploy key with write access, and carries on.
+   - Otherwise it prints the key and stops. Add it on GitHub (lodge-data → Settings → Deploy keys → Add deploy key, **allow write access**) and run `sudo deploy/setup.sh` again.
+
+   The wiki uses only this key, which reaches the data repo alone, never your own GitHub login. You don't need your own clone of lodge-data on the server; the script makes the wiki's.
 4. Copy the media from your computer (it is not in git):
 
    ```sh

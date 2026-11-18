@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Install or update the wiki on a Debian/Ubuntu server.
 #
-#   git clone https://github.com/Castux/lodge-wiki.git && cd lodge-wiki
+#   gh repo clone Castux/lodge-wiki && cd lodge-wiki
 #   sudo deploy/setup.sh            # first run: writes deploy/lodge.conf, then stops
 #   (edit deploy/lodge.conf)
 #   sudo deploy/setup.sh            # installs everything; run again any time to update
@@ -138,6 +138,28 @@ NEW_SUM="$(sha256sum "$BIN" | cut -d' ' -f1)"
 
 say "Data"
 DATA_CHANGED=no
+
+# The deploy key needs the SSH address: turn a GitHub HTTPS one (as gh
+# clones) into it.
+if [[ "$DATA_REPO" =~ ^https://github\.com/([^/]+/[^/]+)$ ]]; then
+  DATA_REPO="git@github.com:${BASH_REMATCH[1]%.git}.git"
+fi
+
+# If whoever runs this script is logged in to the GitHub CLI (gh), use
+# that login to register the server's deploy key on the data repo. The
+# wiki itself keeps using only the deploy key, which reaches that one repo.
+add_deploy_key() {
+  [[ "$DATA_REPO" =~ ^git@github\.com:([^/]+/[^/]+)\.git$ ]] || return 1
+  local slug="${BASH_REMATCH[1]}"
+  command -v gh >/dev/null && sudo -u "$OWNER" -H gh auth status >/dev/null 2>&1 || return 1
+  note "adding the server's deploy key to $slug with your gh login"
+  # The key file is in the service account's private folder: pipe it in.
+  # (GitHub drops deploy keys added this way if the gh login's token is
+  # revoked, e.g. by de-authorizing the GitHub CLI app: then rerun this.)
+  cat "$KEY.pub" | sudo -u "$OWNER" -H gh repo deploy-key add /dev/stdin --allow-write \
+    --title "lodge-wiki@$(hostname)" -R "$slug" >/dev/null || return 1
+}
+
 if [ ! -d "$DATA/.git" ]; then
   if [ -z "$DATA_REPO" ]; then
     as_svc git init -q -b main "$DATA"
@@ -145,7 +167,8 @@ if [ ! -d "$DATA/.git" ]; then
     printf '/_media/\n' | as_svc tee "$DATA/.gitignore" >/dev/null
     as_svc git -C "$DATA" add -A && as_svc git -C "$DATA" commit -qm "New wiki"
     note "no DATA_REPO: started an empty wiki in $DATA"
-  elif ! LSREMOTE="$(as_svc git ls-remote -q "$DATA_REPO" 2>&1 >/dev/null)"; then
+  elif ! LSREMOTE="$(as_svc git ls-remote -q "$DATA_REPO" 2>&1 >/dev/null)" \
+       && ! { add_deploy_key && LSREMOTE="$(as_svc git ls-remote -q "$DATA_REPO" 2>&1 >/dev/null)"; }; then
     warn "The server cannot read $DATA_REPO yet. Git says:"
     printf '%s\n' "$LSREMOTE" | head -n 4 | sed 's/^/     /'
     note "If it is a GitHub repository, add this key to it as a deploy key, with write access"
