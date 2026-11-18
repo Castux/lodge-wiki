@@ -5,8 +5,9 @@
 //	width ≤ 250 → small, ≤ 500 → medium, > 700 → full, otherwise no size
 //	align left/right → left/right; center or none → nothing (the default)
 //
-// Left as they are: tags in HTML blocks and tables (the Domination glyphs,
-// where Markdown is not read), and tags with other attributes. Portraits in
+// Left as they are: tags in HTML blocks and tables (where Markdown is not
+// read), the Domination glyphs (a script, wherever they are), and tags with
+// other attributes. Portraits in
 // a character tracker scene (<div class="statusboard …">) get no size: the
 // scene lays them out. Without -w it lists what it would do.
 //
@@ -115,7 +116,7 @@ func convert(page, src string, counts map[string]int) (string, int) {
 			continue
 		}
 		lines[i] = reImg.ReplaceAllStringFunc(line, func(tag string) string {
-			if inBlock || strings.Contains(line, "<td") {
+			if inBlock || strings.Contains(line, "<td") || strings.Contains(tag, "/glyphs/") {
 				counts["skipped: HTML block or table"]++
 				return tag
 			}
