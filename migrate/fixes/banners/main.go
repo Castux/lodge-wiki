@@ -65,7 +65,7 @@ func main() {
 		skip[strings.TrimSpace(id)] = true
 	}
 	moved := 0
-	var promote, move, demote []string
+	var promote, move, demote, later []string
 	filepath.WalkDir(root, func(p string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -122,14 +122,34 @@ func main() {
 				}
 			}
 		}
+		// a picture after the title and one or two short blocks (subtitle,
+		// date, player): listed only
+		if t == 0 && !notice {
+			for j := 2; j <= 3 && j < len(blocks); j++ {
+				if len(blocks[j-1]) > 150 || strings.HasPrefix(blocks[j-1], "#") {
+					break
+				}
+				if pc, ok := picOf(root, blocks[j]); ok {
+					if pc.landscape() && !strings.Contains(pc.src, "/notice/") {
+						pr := ""
+						if pc.preset != "" {
+							pr = "#" + pc.preset + " "
+						}
+						later = append(later, fmt.Sprintf("%s  %s %s%s  after: %q", page, pc.src, pr, pc.size(), strings.Join(blocks[1:j], " / ")))
+					}
+					break
+				}
+			}
+		}
 		return nil
 	})
-	for _, l := range [][]string{promote, move, demote} {
+	for _, l := range [][]string{promote, move, demote, later} {
 		sort.Strings(l)
 	}
 	show("1. Before the title, landscape, but with a size or side: drop it to make the banner", promote)
 	show("2. Right after the title, landscape: move it before the title (without size or side)", move)
 	show("3. Notices shown with a banner: move the picture after the title", demote)
+	show("4. After the title and a few short lines (subtitle, date…): check by hand", later)
 	if *write {
 		fmt.Printf("\nmoved %d pictures before their titles\n", moved)
 	}
