@@ -414,4 +414,3 @@ func (g *Git) LogAll(since time.Time) ([]Commit, error) {
 	}
 	return res, nil
 }
-
