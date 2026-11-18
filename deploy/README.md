@@ -17,9 +17,9 @@
 
 3. The script creates an SSH key for the wiki's service account, which needs read and write access to the data repo:
    - If you are logged in to the GitHub CLI (`gh auth login`), the script adds the key to the repo itself as a deploy key with write access, and carries on.
-   - Otherwise it prints the key and stops. Add it on GitHub (lodge-data → Settings → Deploy keys → Add deploy key, **allow write access**) and run `sudo deploy/setup.sh` again.
+   - Otherwise it prints the key and stops. Add it on GitHub (the data repo → Settings → Deploy keys → Add deploy key, **allow write access**) and run `sudo deploy/setup.sh` again.
 
-   The wiki uses only this key, which reaches the data repo alone, never your own GitHub login. You don't need your own clone of lodge-data on the server; the script makes the wiki's.
+   The wiki uses only this key, which reaches the data repo alone, never your own GitHub login. You don't need your own clone of the data repo on the server; the script makes the wiki's.
 4. Copy the media from your computer (it is not in git):
 
    ```sh
@@ -49,7 +49,7 @@ It pulls the latest code, rebuilds, rewrites the service and Caddy configuration
 | Service (sandboxed, restarts on failure) | `/etc/systemd/system/lodge-wiki.service` |
 | HTTPS (automatic certificate) | `/etc/caddy/sites/lodge-wiki.caddy`, imported by `/etc/caddy/Caddyfile` |
 
-With `SYNC=yes` every change is pushed to the data repo a few seconds later, so GitHub always holds the pages, data, layouts and accounts. Media needs its own backup (see the to-do list in `PLAN.md`).
+With `SYNC=yes` every change is pushed to the data repo a few seconds later, so GitHub always holds the pages, data, layouts and accounts. Uploaded files need their own backup: see Backups below.
 
 **Editing the data outside the wiki.** Clone the data repo anywhere, edit, commit and push to GitHub: the wiki merges it within 5 minutes (admins can press **Sync now** on Recent changes). If a file you changed was also changed in the wiki meanwhile, in a way git cannot combine, the wiki keeps its own version of that file and Recent changes tells admins which files: pull, redo your change on top, push again. Your version stays in the history (`git log --full-history -p -- <file>`). Don't edit `_config/media.json` by hand: the wiki maintains it.
 

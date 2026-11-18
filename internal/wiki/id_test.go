@@ -4,13 +4,13 @@ import "testing"
 
 func TestCleanID(t *testing.T) {
 	cases := map[string]string{
-		"Fool's Landing":            "fool-s-landing",
-		"foolslanding:notice:Start": "foolslanding/notice/start",
-		"  Élan  Vital ":            "elan-vital",
-		"a::b":                      "a/b",
-		"_hidden:-x-":               "hidden/x",
-		"Straße":                    "strasse",
-		"20180113-siege-of-kobold":  "20180113-siege-of-kobold",
+		"Dragon's Rest":              "dragon-s-rest",
+		"kingdom:notice:Start":       "kingdom/notice/start",
+		"  Élan  Vital ":             "elan-vital",
+		"a::b":                       "a/b",
+		"_hidden:-x-":                "hidden/x",
+		"Straße":                     "strasse",
+		"20180113-siege-of-the-mill": "20180113-siege-of-the-mill",
 	}
 	for in, want := range cases {
 		if got := CleanID(in); got != want {
@@ -21,13 +21,13 @@ func TestCleanID(t *testing.T) {
 
 func TestResolve(t *testing.T) {
 	cases := []struct{ ns, target, want string }{
-		{"foolslanding/notice", "missingpet", "foolslanding/notice/missingpet"},
-		{"foolslanding/notice", "foolslanding:story:x", "foolslanding/story/x"},
-		{"foolslanding/notice", "/rules/combat", "rules/combat"},
-		{"foolslanding/notice", "..:story:x", "foolslanding/story/x"},
-		{"foolslanding/notice", ".:x", "foolslanding/notice/x"},
-		{"foolslanding", "skarnholm:", "skarnholm/start"},
-		{"", "Fool's Landing", "fool-s-landing"},
+		{"kingdom/notice", "missingpet", "kingdom/notice/missingpet"},
+		{"kingdom/notice", "kingdom:story:x", "kingdom/story/x"},
+		{"kingdom/notice", "/rules/combat", "rules/combat"},
+		{"kingdom/notice", "..:story:x", "kingdom/story/x"},
+		{"kingdom/notice", ".:x", "kingdom/notice/x"},
+		{"kingdom", "islands:", "islands/start"},
+		{"", "Dragon's Rest", "dragon-s-rest"},
 		{"a", "..", "start"},
 	}
 	for _, c := range cases {

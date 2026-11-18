@@ -259,7 +259,7 @@ func (s *Server) show(w http.ResponseWriter, r *http.Request, v *View) {
 	w.Write(b.Bytes())
 }
 
-// crumbs builds the namespace trail: Home › Fool's Landing › Notices › Page.
+// crumbs builds the namespace trail: Home › Kingdom › Notices › Page.
 func (s *Server) crumbs(id, title string) []Crumb {
 	idx := s.store.Index()
 	home := "Home"

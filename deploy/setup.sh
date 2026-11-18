@@ -59,7 +59,7 @@ fi
 . "$CONF"
 : "${BASE:=/srv/lodge}" "${LISTEN:=127.0.0.1:8080}" "${SERVICE_USER:=lodge}"
 # (not ${TITLE:=...}: bash would read the apostrophe as an opening quote)
-[ -n "${TITLE:-}" ] || TITLE="The Chasers' Lodge"
+[ -n "${TITLE:-}" ] || TITLE="Wiki"
 : "${NOTIFY:=no}" "${SYNC:=${PUSH:-yes}}" "${DOMAIN:=}" "${DATA_REPO:=}"   # (PUSH: the old name of SYNC)
 DATA="$BASE/lodge-data"
 STATE="$BASE/lodge-state"
@@ -237,7 +237,7 @@ EXEC="$BIN"; for f in "${FLAGS[@]}"; do EXEC+=" $(sd_quote "$f")"; done
 NEW_UNIT="$(cat <<EOF
 # Written by lodge-wiki/deploy/setup.sh: edit deploy/lodge.conf and rerun instead.
 [Unit]
-Description=The Chasers' Lodge wiki
+Description=lodge-wiki ($TITLE)
 After=network-online.target
 Wants=network-online.target
 

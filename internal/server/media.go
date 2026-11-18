@@ -210,7 +210,7 @@ var mediaExts = map[string]bool{
 	".pdf": true, ".mp3": true, ".wav": true, ".ogg": true, ".m4a": true, ".txt": true,
 }
 
-// mediaNS validates a media namespace ("foolslanding/story").
+// mediaNS validates a media namespace ("kingdom/story").
 func mediaNS(ns string) (string, bool) {
 	ns = strings.Trim(path.Clean("/"+ns), "/")
 	if strings.Contains(ns, "..") {

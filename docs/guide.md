@@ -9,17 +9,17 @@ by `/`:
 
 | Address | What it is |
 | --- | --- |
-| `/foolslanding/notice/missingpet` | the page `missingpet` in the folder `foolslanding/notice` |
-| `/foolslanding/` | the folder's front page (its page named `start`) |
+| `/kingdom/notice/missingpet` | the page `missingpet` in the folder `kingdom/notice` |
+| `/kingdom/` | the folder's front page (its page named `start`) |
 | `/` | the wiki's front page |
 
-Folders (DokuWiki called them *namespaces*) are not created separately: a
+Folders (sometimes called *namespaces*) are not created separately: a
 folder exists as soon as a page is saved in it, and disappears with its
 last page. Give a folder a `start` page to describe it; it is what
 `/folder/` shows and what lists of folders link to.
 
 **Names are cleaned up automatically**: lowercase, accents removed, spaces
-and punctuation turned into `-`. "Fool's Landing" becomes `fool-s-landing`,
+and punctuation turned into `-`. "Dragon's Rest" becomes `dragon-s-rest`,
 "Château d'Ys" becomes `chateau-d-ys`. Only letters, digits, `-`, `_` and
 `.` remain.
 
@@ -42,7 +42,7 @@ everywhere; the address stays the same.
 
 Moving a page **is** renaming it: **Rename** in the sidebar asks for the
 new address. Change the last part to rename, the folders to move, or both
-(`foolslanding/story/new-name`).
+(`kingdom/story/new-name`).
 
 - The page keeps its history.
 - Every link to it, on every page, is updated in the same change, so
@@ -52,7 +52,7 @@ new address. Change the last part to rename, the folders to move, or both
 To move or rename a **whole folder** (all its pages and sub-folders, and
 optionally its images folder), use **Files**, open the folder and choose
 **move**. Widgets that name a data file in a moved folder (for example
-`data: skarnholm/mapdata.json`) must be updated by hand.
+`data: islands/mapdata.json`) must be updated by hand.
 
 ### Deleting
 
@@ -78,7 +78,7 @@ reload, and merge by hand.
 
 - **Search**: click it, or press <kbd>/</kbd> or <kbd>Ctrl</kbd>+<kbd>K</kbd>,
   and type a few letters of a page's title (in any order of words, letters
-  can be skipped: `evrlght kp` finds Everlight Keep); <kbd>Enter</kbd> opens
+  can be skipped: `drgn rst` finds Dragon's Rest); <kbd>Enter</kbd> opens
   it. The last line searches the text of all pages instead.
 - **Recent changes** lists the latest edits on the whole wiki.
 - **Backlinks** lists the pages that link to the current page.
@@ -136,8 +136,8 @@ get a table of contents in the sidebar. Every heading can be linked to with
 ### Links
 
 ```markdown
-[Missing pet](/foolslanding/notice/missingpet)
-[Day two of the siege](/foolslanding/story/siege#day-two)
+[Missing pet](/kingdom/notice/missingpet)
+[Day two of the siege](/kingdom/story/siege#day-two)
 [The rules](/rules/)
 [A page in the same folder](missingpet)
 [A page one folder up](../lore)
@@ -153,7 +153,7 @@ text. The last line, **New page**, links to a page that does not exist yet
 (in the current folder), to be written later.
 
 Otherwise, copy the address from the browser bar and keep only the part
-after the domain name (`/foolslanding/...`). Full addresses (`https://...`)
+after the domain name (`/kingdom/...`). Full addresses (`https://...`)
 on their own become links too.
 
 A link without a `/` at the start is relative to the current page's folder.
@@ -220,7 +220,7 @@ Text shown exactly as typed,
 ### Images and other files
 
 Images and files (pdf, sound) are uploaded to the wiki, in folders that
-mirror the page folders: `/_media/foolslanding/map.jpg`.
+mirror the page folders: `/_media/kingdom/map.jpg`.
 
 In the editor, **paste** an image (a screenshot, an image copied from
 another site) or **drop** image files onto the text: they are uploaded to
@@ -233,7 +233,7 @@ wav, ogg, m4a, txt; up to 64 MB). The size, placement and caption chosen
 above the files are written into the inserted image. Typing works as well:
 
 ```markdown
-![The coast, seen from the tower](/_media/foolslanding/map.jpg)
+![The coast, seen from the tower](/_media/kingdom/map.jpg)
 [The rules as a pdf](/_media/rules/rules.pdf)
 ```
 
@@ -249,7 +249,7 @@ it. Clicking an image opens it full size.
   with the caption underneath:
 
   ```markdown
-  ![Marak](/_media/foolslanding/marak.jpg "Marak at the siege")
+  ![Marak](/_media/kingdom/marak.jpg "Marak at the siege")
   ```
 
 - **Several images together**, on consecutive lines with nothing else, form
@@ -257,9 +257,9 @@ it. Clicking an image opens it full size.
   it whole):
 
   ```markdown
-  ![The lodge](/_media/foolslanding/lodge.jpg)
-  ![The hag](/_media/foolslanding/hag.jpg)
-  ![The gobliner](/_media/foolslanding/gobliner.jpg)
+  ![The inn](/_media/kingdom/inn.jpg)
+  ![The hag](/_media/kingdom/hag.jpg)
+  ![The gobliner](/_media/kingdom/gobliner.jpg)
   ```
 
 The wiki's look (its theme) may add touches of its own, such as a banner
@@ -277,8 +277,8 @@ with `-`, for example `#small-right`):
 | `right`, `left` | beside the text, on that side (at most 40% of the width unless `small` or `medium`); put the image just before the paragraph it goes with |
 
 ```markdown
-![Firehoof](/_media/foolslanding/firehoof.png#small-right)
-Firehoof is the lodge's horse, ...
+![Firehoof](/_media/kingdom/firehoof.png#small-right)
+Firehoof is the party's horse, ...
 ```
 
 On phones, images beside the text are shown on their own line.
@@ -286,7 +286,7 @@ On phones, images beside the text are shown on their own line.
 Sound files can be played in the page:
 
 ```html
-<audio controls src="/_media/foolslanding/tavern-song.mp3"></audio>
+<audio controls src="/_media/kingdom/tavern-song.mp3"></audio>
 ```
 
 **Files** in the sidebar lists every uploaded file, with which pages use
@@ -327,7 +327,7 @@ A `list` block shows the pages of a folder, and stays up to date by itself:
 
 ````markdown
 ```list
-ns: skarnholm/notice
+ns: islands/notice
 sort: created
 reverse: true
 ```
@@ -338,7 +338,7 @@ title, in three columns. Settings, all optional:
 
 | Setting | Values | What it does |
 | --- | --- | --- |
-| `ns` | a folder: `skarnholm/notice`, `../lore`, `/` | the folder to list (default: the current page's); same rules as links |
+| `ns` | a folder: `islands/notice`, `../lore`, `/` | the folder to list (default: the current page's); same rules as links |
 | `exclude` | `[start, self, old-notes]` | page names to leave out; `self` is the current page |
 | `recursive` | `true` | include pages of all sub-folders too |
 | `namespaces` | `true` | also list the sub-folders (linking to their front pages), above the pages |
@@ -370,7 +370,7 @@ exclude: [self]
 ```
 
 ```list
-ns: foolslanding/chronicles
+ns: kingdom/chronicles
 sort: id
 natural: true
 numbered: true
@@ -383,22 +383,6 @@ tree: true
 ```
 ````
 
-The notice board, as a wooden board of pinned pictures:
-
-````markdown
-<div class="noticeboard wood1">
-
-```list
-ns: foolslanding/notice
-pictures: true
-sort: created
-reverse: true
-exclude: [start]
-```
-
-</div>
-````
-
 ## Widgets
 
 A `widget` block puts an interactive tool in the page. The first word after
@@ -406,7 +390,7 @@ A `widget` block puts an interactive tool in the page. The first word after
 
 ````markdown
 ```widget map
-data: skarnholm/mapdata.json
+data: islands/mapdata.json
 ```
 ````
 
@@ -438,12 +422,11 @@ git repository, one commit per change, so the whole wiki can be copied,
 backed up and restored. Uploaded files are stored next to it, not in git.
 
 - `_layout/page.html` and `_layout/style.css` give the wiki its look; a
-  folder can have its own `_layout/` (each campaign does), which applies to
+  folder can have its own `_layout/` (a campaign, a section), which applies to
   everything under it: its `style.css` is added after the main one.
 - `_layout/sidebar.md` is the sidebar: plain Markdown (usually a bold line
   per group, then a list of links), shown on every page by the layout. The
-  nearest one applies, so each campaign has its own sections, and the
-  wiki's own pages get the top-level one. Edit it from **Files**.
+  nearest one applies, so each section of the wiki can have its own. Edit it from **Files**.
 - `_widgets/<name>/widget.js` (with optional `widget.css` and
   `README.md`, the documentation shown above) defines a widget.
 - `_config/` holds the accounts, notification rules and the list of

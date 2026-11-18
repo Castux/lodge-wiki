@@ -3,14 +3,14 @@ package server
 import "testing"
 
 func TestNotifyRules(t *testing.T) {
-	h := notifyHook{Webhook: "x", On: []string{"create"}, Namespaces: []string{"foolslanding/log"}}
-	if !h.matches(pageEvent{Type: "create", ID: "foolslanding/log/a"}) {
+	h := notifyHook{Webhook: "x", On: []string{"create"}, Namespaces: []string{"kingdom/log"}}
+	if !h.matches(pageEvent{Type: "create", ID: "kingdom/log/a"}) {
 		t.Error("should match a new log")
 	}
-	if h.matches(pageEvent{Type: "edit", ID: "foolslanding/log/a"}) {
+	if h.matches(pageEvent{Type: "edit", ID: "kingdom/log/a"}) {
 		t.Error("should not match an edit")
 	}
-	if h.matches(pageEvent{Type: "create", ID: "foolslanding/log/sub/a"}) {
+	if h.matches(pageEvent{Type: "create", ID: "kingdom/log/sub/a"}) {
 		t.Error("namespaces match exactly, not sub-folders (as before)")
 	}
 	all := notifyHook{Webhook: "x", ColorCreate: "0f917c", Color: "ffffff"}

@@ -1,4 +1,5 @@
-// Command lodge-wiki serves the Chasers' Lodge wiki from a content repo.
+// Command lodge-wiki serves a wiki from a content repo: Markdown pages and
+// data files in git, every change a commit.
 //
 //	go run . --root ../lodge-data
 package main
@@ -30,7 +31,7 @@ func main() {
 	root := flag.String("root", "../lodge-data", "content repository")
 	state := flag.String("state", "", "disposable runtime state folder (session key, scaled-image cache); default: <root>/../lodge-state")
 	addr := flag.String("addr", "localhost:8080", "listen address")
-	title := flag.String("title", "The Chasers' Lodge", "site title")
+	title := flag.String("title", "Wiki", "site title")
 	public := flag.Bool("public", false, "allow reading without logging in")
 	devAs := flag.String("as", "", "DEVELOPMENT ONLY: treat every request as this logged-in account")
 	notify := flag.Bool("notify", false, "send the notifications in _config/notifications.json (otherwise they are only logged)")

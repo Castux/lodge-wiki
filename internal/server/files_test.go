@@ -10,10 +10,10 @@ func TestFileAccess(t *testing.T) {
 		path      string
 		ok, admin bool
 	}{
-		{"foolslanding/start.md", true, false},
-		{"skarnholm/mapdata.json", true, false},
+		{"kingdom/start.md", true, false},
+		{"islands/mapdata.json", true, false},
 		{"_layout/style.css", true, true},
-		{"skarnholm/_layout/style.css", true, true},
+		{"islands/_layout/style.css", true, true},
 		{"_widgets/map/widget.js", true, true},
 		{"_media/a.json", false, false},
 		{".git/config", false, false},

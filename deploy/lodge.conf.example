@@ -14,7 +14,7 @@ DOMAIN=wiki.example.org
 # CLI (gh), the script adds that key to the repo; otherwise it prints it.
 # (An https://github.com/... address is turned into the SSH one.)
 # Leave empty to start a new, empty wiki.
-DATA_REPO=git@github.com:Castux/lodge-data.git
+DATA_REPO=git@github.com:you/lodge-data.git
 
 # Where the content and runtime state live (lodge-data/, lodge-state/).
 BASE=/srv/lodge
@@ -22,7 +22,8 @@ BASE=/srv/lodge
 # Where the wiki listens; Caddy forwards to it. Keep it on 127.0.0.1.
 LISTEN=127.0.0.1:8080
 
-TITLE="The Chasers' Lodge"
+# The site's name, shown in the browser tab and the default layout.
+TITLE="My Wiki"
 
 # Send the Discord notifications in _config/notifications.json (yes/no).
 NOTIFY=no

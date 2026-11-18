@@ -23,9 +23,8 @@ import (
 
 // Notifications: after a page is created, edited, deleted or reverted,
 // the rules in _config/notifications.json may post a message to a webhook
-// (Discord). This reproduces the old lodgenotifier plugin: same rules,
-// same placeholders, same message shape. Nothing is sent unless the
-// server runs with --notify; otherwise the messages are only logged.
+// (Discord). Nothing is sent unless the server runs with --notify;
+// otherwise the messages are only logged.
 
 // NotificationsFile is the rules file in the content repo.
 const NotificationsFile = "_config/notifications.json"

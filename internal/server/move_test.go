@@ -28,10 +28,10 @@ func TestRewriteRefs(t *testing.T) {
 
 func TestCleanPath(t *testing.T) {
 	cases := map[string]string{
-		"foolslanding/War Room 2":      "foolslanding/war-room-2",
+		"kingdom/War Room 2":           "kingdom/war-room-2",
 		"/a/b/Kirrix the Inventor.JPG": "a/b/kirrix-the-inventor.jpg",
 		`a\b\c`:                        "a/b/c",
-		"foolslanding/story/new-name":  "foolslanding/story/new-name",
+		"kingdom/story/new-name":       "kingdom/story/new-name",
 	}
 	for in, want := range cases {
 		if got := cleanPath(in); got != want {
