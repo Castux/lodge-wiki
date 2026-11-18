@@ -275,12 +275,7 @@ Later:
 - [ ] **Discord login**: needs a Discord application (client id, secret) and the public address for the redirect.
 - [ ] Empty the media bin (admins).
 - [ ] Drop the `pending` role: accounts are created by admins, there is no sign-up page.
-- [ ] **Convert the old HTML images to markdown** (after the switch-over, like other content edits; ask the players first, they may have opinions). About 950 `<img>` tags outside the Domination glyphs. A one-off script, reviewed in the diff:
-  - `align="center"` or no align, width 400 or more, or no width → `![alt](src)` (laid out automatically);
-  - width 250 or less → `#small`; 300 to 350 → `#medium`;
-  - `align="right"` / `"left"` → `#right` / `#left` (with the size word if any), moved to the start of the paragraph it sat in. Many floats came from DokuWiki's space-based alignment (`{{ img}}`) and were probably accidental: list them for a decision instead of converting blindly;
-  - images inside links or tables, and anything else unusual: leave as HTML and list;
-  - glyphs (`width="40"`/`"45"`, `domination/glyphs/`): leave as HTML, or a small glyph helper later.
+- [x] **Convert the old HTML images to markdown**: done with `migrate/fixes/imgtags` (933 images: width ≤ 250 `#small`, ≤ 500 `#medium`, > 700 `#full`, `align` left/right kept as `#left`/`#right`). Left as HTML: the Domination glyph tables, two images in an HTML block (Emir Rashad), two with a height (wiki/syntax). The floats were kept as they were; some came from DokuWiki's space-based alignment and may be accidental: fix by hand when seen.
 - [ ] **Explore: records from mostly-structured pages.** No page format change: parse the conventions pages already follow (character sheets, items, notices) into records, see how regular they are, and whether a record could drive a fixed layout for its page (or a listing) while the page stays free text. Keeps the wiki's flexibility; exceptions stay plain pages.
 - [ ] **Clean up DokuWiki leftovers in the content**, once the old wiki is retired: the old help pages in `wiki/` (`syntax`, `dokuwiki`, `newlines`, `spoiler-tag`, `welcome`, `orphans`, `stats_script`, `notices-tech`...) and mentions of DokuWiki syntax or plugins elsewhere; point to Help instead.
 - [ ] Ideas that need content edits, once the old wiki is retired: a navigation bar per campaign (`_layout/nav.md`), "recently updated" on campaign home pages (`limit` on `list` blocks), "New log" / "New story" buttons with page templates.
