@@ -1,4 +1,4 @@
-<link rel="stylesheet" href="/_/static/cm.css"><script src="/_/static/cm.js"></script>
+<link rel="stylesheet" href="{{static "cm.css"}}"><script src="{{static "cm.js"}}"></script>
 <form method="post" action="/_/edit/{{.ID}}" class="lw-editor{{if .IsFile}} lw-file{{end}}" data-preview="/_/preview/{{.ID}}" data-lang="{{.Lang}}">
   <div class="lw-editor-head">
     {{if .IsFile}}<h1>{{if .ReadOnly}}Viewing{{else if .Exists}}Editing{{else}}Creating{{end}} <code>{{.File}}</code></h1>

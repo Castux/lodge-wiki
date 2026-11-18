@@ -223,3 +223,27 @@ func TestSidebar(t *testing.T) {
 		}
 	}
 }
+
+// Built-in files are linked with their version and kept by browsers; the
+// page list and unversioned files are revalidated with an ETag.
+func TestCaching(t *testing.T) {
+	srv, _, _ := testWiki(t, "reader")
+	body := do(srv, "GET", "/start", nil, nil).Body.String()
+	if !strings.Contains(body, staticURL("core.js")) {
+		t.Fatalf("page does not link the versioned core.js:\n%s", body)
+	}
+	w := do(srv, "GET", staticURL("core.js"), nil, nil)
+	if cc := w.Header().Get("Cache-Control"); !strings.Contains(cc, "immutable") {
+		t.Errorf("versioned core.js: Cache-Control %q", cc)
+	}
+	for _, target := range []string{"/_/static/core.js", "/_/titles"} {
+		first := do(srv, "GET", target, nil, nil)
+		etag := first.Header().Get("ETag")
+		if etag == "" || first.Code != http.StatusOK {
+			t.Fatalf("%s: status %d, ETag %q", target, first.Code, etag)
+		}
+		if again := do(srv, "GET", target, nil, map[string]string{"If-None-Match": etag}); again.Code != http.StatusNotModified || again.Body.Len() != 0 {
+			t.Errorf("%s with its ETag: status %d, %d bytes", target, again.Code, again.Body.Len())
+		}
+	}
+}

@@ -1,6 +1,8 @@
 package server
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"html/template"
@@ -495,7 +497,17 @@ func (s *Server) titles(w http.ResponseWriter, r *http.Request) {
 		out = append(out, entry{id, p.Title, wiki.PageURL(id)})
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })
+	b, _ := json.Marshal(out)
+	// The list is large and rarely changes: the browser keeps its copy and
+	// only asks whether it is still current.
+	sum := sha256.Sum256(b)
+	etag := `"` + hex.EncodeToString(sum[:8]) + `"`
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Cache-Control", "private, no-cache")
-	json.NewEncoder(w).Encode(out)
+	w.Header().Set("ETag", etag)
+	if r.Header.Get("If-None-Match") == etag {
+		w.WriteHeader(http.StatusNotModified)
+		return
+	}
+	w.Write(b)
 }

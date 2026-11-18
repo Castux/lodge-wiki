@@ -2,9 +2,12 @@ package server
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"embed"
+	"encoding/hex"
 	"fmt"
 	"html/template"
+	"io/fs"
 	"log"
 	"net/http"
 	"os"
@@ -18,6 +21,24 @@ import (
 
 //go:embed ui/*.html static/*
 var uiFS embed.FS
+
+// staticVersion fingerprints the built-in files. Their addresses carry it
+// (staticURL), so browsers keep them until a new build changes it.
+var staticVersion = sync.OnceValue(func() string {
+	h := sha256.New()
+	fs.WalkDir(uiFS, "static", func(p string, d fs.DirEntry, err error) error {
+		if err == nil && !d.IsDir() {
+			b, _ := uiFS.ReadFile(p)
+			h.Write([]byte(p))
+			h.Write(b)
+		}
+		return nil
+	})
+	return hex.EncodeToString(h.Sum(nil))[:12]
+})
+
+// staticURL is the address of a built-in file, with its version.
+func staticURL(name string) string { return "/_/static/" + name + "?v=" + staticVersion() }
 
 // View is what a layout's page.html receives.
 type View struct {
@@ -72,6 +93,7 @@ var funcs = template.FuncMap{
 	},
 	"ago":     ago,
 	"pageurl": wiki.PageURL,
+	"static":  staticURL,
 	"size": func(n int64) string {
 		switch {
 		case n >= 1<<20:
@@ -197,9 +219,9 @@ func (s *Server) show(w http.ResponseWriter, r *http.Request, v *View) {
 			break
 		}
 	}
-	v.Head = template.HTML(`<link rel="stylesheet" href="/_/static/core.css">`)
+	v.Head = template.HTML(`<link rel="stylesheet" href="` + staticURL("core.css") + `">`)
 	var scripts strings.Builder
-	scripts.WriteString(`<script src="/_/static/wiki.js"></script><script src="/_/static/core.js"></script>`)
+	scripts.WriteString(`<script src="` + staticURL("wiki.js") + `"></script><script src="` + staticURL("core.js") + `"></script>`)
 	seen := map[string]bool{}
 	for _, name := range v.Widgets {
 		if seen[name] {

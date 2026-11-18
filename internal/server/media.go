@@ -189,7 +189,19 @@ func (s *Server) static(w http.ResponseWriter, r *http.Request) {
 	case ".js":
 		w.Header().Set("Content-Type", "text/javascript; charset=utf-8")
 	}
-	w.Header().Set("Cache-Control", "no-cache")
+	// A versioned address (staticURL) never changes content: kept for a
+	// year. Others are checked against the version each time.
+	etag := `"` + staticVersion() + `"`
+	w.Header().Set("ETag", etag)
+	if r.URL.Query().Get("v") == staticVersion() {
+		w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+	} else {
+		w.Header().Set("Cache-Control", "no-cache")
+	}
+	if r.Header.Get("If-None-Match") == etag {
+		w.WriteHeader(http.StatusNotModified)
+		return
+	}
 	w.Write(b)
 }
 
