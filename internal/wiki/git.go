@@ -63,6 +63,13 @@ func (g *Git) run(stdin []byte, env []string, args ...string) ([]byte, error) {
 	return out.Bytes(), nil
 }
 
+// Bundle returns the whole history (every branch and tag) as a git
+// bundle: one file that "git clone" can restore. It is a consistent
+// snapshot even while the wiki writes.
+func (g *Git) Bundle() ([]byte, error) {
+	return g.run(nil, nil, "bundle", "create", "-", "--all")
+}
+
 // Revision is one commit touching a file.
 type Revision struct {
 	Hash    string

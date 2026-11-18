@@ -1,6 +1,8 @@
 package server
 
 import (
+	"archive/zip"
+	"bytes"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -244,6 +246,42 @@ func TestCaching(t *testing.T) {
 		}
 		if again := do(srv, "GET", target, nil, map[string]string{"If-None-Match": etag}); again.Code != http.StatusNotModified || again.Body.Len() != 0 {
 			t.Errorf("%s with its ETag: status %d, %d bytes", target, again.Code, again.Body.Len())
+		}
+	}
+}
+
+// The backup holds the pages, the media, the history and instructions, for
+// admins only.
+func TestBackup(t *testing.T) {
+	srv, root, _ := testWiki(t, "editor")
+	if w := do(srv, "GET", "/_/backup", nil, nil); w.Code == http.StatusOK {
+		t.Fatal("an editor got the backup")
+	}
+	os.WriteFile(filepath.Join(root, "_config", "users.json"), []byte(`{"boss": {"hash": "$2a$10$secrethashsecrethashsecrethashsecrethashsecrethashsec", "role": 3}}`), 0o644)
+	srv, err := New(Config{Root: root, State: t.TempDir(), Title: "t", DevUser: "boss"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	w := do(srv, "GET", "/_/backup", nil, nil)
+	if w.Code != http.StatusOK {
+		t.Fatalf("admin: status %d: %s", w.Code, w.Body)
+	}
+	zr, err := zip.NewReader(bytes.NewReader(w.Body.Bytes()), int64(w.Body.Len()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	have := map[string]bool{}
+	for _, f := range zr.File {
+		have[f.Name[strings.Index(f.Name, "/")+1:]] = true
+	}
+	for _, want := range []string{"README.txt", "lodge-data.git.bundle", "lodge-data/start.md", "lodge-data/_media/a/pic.png", "lodge-data/_config/users.json"} {
+		if !have[want] {
+			t.Errorf("missing %s in %v", want, have)
+		}
+	}
+	for name := range have {
+		if strings.HasPrefix(name, "lodge-data/.git/") {
+			t.Fatalf("the .git folder is in the zip: %s", name)
 		}
 	}
 }

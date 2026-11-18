@@ -86,6 +86,7 @@ func (s *Server) routes() {
 	m.HandleFunc("GET /_/account", s.accountPage)
 	m.HandleFunc("POST /_/account", s.accountSave)
 	m.Handle("POST /_/sync", s.need(RoleAdmin, s.syncNow))
+	m.Handle("GET /_/backup", s.need(RoleAdmin, s.backup))
 	m.Handle("GET /_/users", s.need(RoleAdmin, s.usersPage))
 	m.Handle("POST /_/users", s.need(RoleAdmin, s.usersSave))
 

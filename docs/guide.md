@@ -442,6 +442,9 @@ backed up and restored. Uploaded files are stored next to it, not in git.
   `README.md`, the documentation shown above) defines a widget.
 - `_config/` holds the accounts, notification rules and the list of
   uploaded files. Only admins can see it.
+- **Download a backup** (admins, on Recent changes) gives everything in
+  one zip: every file, the uploaded files, the history, and how to run the
+  wiki again from it.
 - The repository can be edited outside the wiki: changes pushed to its
   GitHub copy are merged within a few minutes (or at once with **Sync
   now** on Recent changes). If a file was also changed in the wiki in the

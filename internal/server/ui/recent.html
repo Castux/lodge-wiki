@@ -5,7 +5,8 @@
   {{if .Sync.Err}}<p class="lw-error">The last sync failed: {{.Sync.Err}}</p>{{end}}
   {{if .Sync.Overridden}}<p class="lw-error">{{ago .Sync.OverriddenAt}}, changes made on <code>{{.Sync.Remote}}</code> conflicted with edits in the wiki; the wiki's version was kept for: {{range $i, $f := .Sync.Overridden}}{{if $i}}, {{end}}<code>{{$f}}</code>{{end}}. Your version is still in the history (<code>git log --full-history -p -- <i>file</i></code>): pull, redo the change on top, and push.</p>{{end}}
 </form>
-{{else}}<p class="lw-quiet">Not syncing with a remote repository (start the wiki with <code>--sync</code>).</p>{{end}}{{end}}
+{{else}}<p class="lw-quiet">Not syncing with a remote repository (start the wiki with <code>--sync</code>).</p>{{end}}
+<p class="lw-backup"><a href="/_/backup" class="lw-button">Download a backup</a> <span class="lw-quiet">everything in one zip, to move the wiki elsewhere: pages and their history, settings, accounts and uploaded files (large: it holds every picture).</span></p>{{end}}
 <ul class="lw-recent">
 {{range $c := .Changes}}
 <li><span class="lw-quiet" title="{{date .Time}}">{{ago .Time}}</span> · <strong>{{.Author}}</strong> ·

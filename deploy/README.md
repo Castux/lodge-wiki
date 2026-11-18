@@ -56,3 +56,15 @@ With `SYNC=yes` every change is pushed to the data repo a few seconds later, so 
 **Other services on the same machine.** The wiki only adds its own site file in `/etc/caddy/sites/` and one `import sites/*` line to the Caddyfile (or replaces Caddy's stock placeholder page); other sites are left as they are. The result is checked with `caddy validate` before Caddy is reloaded (not restarted), and the previous files are restored if it fails. If the wiki's local port (`LISTEN`) is taken by another program, the script stops and says so.
 
 Useful commands: `journalctl -u lodge-wiki -f` (logs), `sudo systemctl restart lodge-wiki`, `systemctl status lodge-wiki`.
+
+## Backups
+
+Pages and their history are on GitHub (the data repo), but uploaded files are not in git: they live only on the server.
+
+**One click:** admins have **Download a backup** on Recent changes. It gives one zip with everything needed to run the wiki elsewhere, without access to the server: every file (pages, settings, accounts, uploaded files and the bin), the whole history as a git bundle, and a `README.txt` saying how to restore it (`git clone` the bundle, copy the media into it, run lodge-wiki on it). Keep it private: it holds the accounts and the Discord webhooks.
+
+**Regularly, from a machine you control** (pulling, so the server holds no keys to it):
+
+```sh
+rsync -a you@server:/srv/lodge/lodge-data/_media/ ~/lodge-media-backup/
+```

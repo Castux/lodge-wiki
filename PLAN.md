@@ -253,7 +253,7 @@ Before going live:
 
 - [x] **Notifications**: done (`_config/notifications.json`, the old rules); turn on with `--notify` when the wiki goes live.
 - [x] **Deployment**: `deploy/setup.sh` (see `deploy/README.md`); still to do: restic or the backup tool for media on the server.
-- [ ] **Media backup tool**: `lodge-wiki backup-media --from <server> --to <folder>` reading `_config/media.json`, copying missing or changed files (and the bin), then verifying hashes. Decide the transport (rsync/SFTP on the server's `_media`, or HTTP as an admin, which needs an admin-only way to fetch bin files).
+- [x] **Backups**: **Download a backup** for admins (Recent changes): one zip with every file, the media and the bin, the history as a git bundle and restore instructions, so the wiki can be moved without access to the server; rsync of `_media` for regular copies (`deploy/README.md`).
 - [x] **Security before going public**: cross-origin protection (CSRF), path and git-argument hardening, handler tests for them (see DECISIONS). Still open: more handler tests beyond security.
 - [x] **User guide**: `docs/guide.md`, served at `/_/help` (Help in the sidebar), with each widget's `_widgets/<name>/README.md`.
 - [x] **Finding and linking**: quick jump (`/`, Ctrl+K) with fuzzy matching on titles; links by title in the editor (`[[`, Ctrl+K); images pasted or dropped into the editor are uploaded and inserted.
