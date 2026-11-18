@@ -254,7 +254,7 @@ it. Clicking an image opens it full size.
   ```
 
 - An image at the very top of a page, right before the title, is shown as
-  a wide **banner** with the title over its lower edge (unless it has a
+  a wide **banner**, cropped to a band across the page (unless it has a
   size or a side).
 
 To change the **size** or put the image **beside the text**, add one of
