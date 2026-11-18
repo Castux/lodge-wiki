@@ -312,8 +312,9 @@ document.addEventListener("click", async ev => {
     };
     input.addEventListener("input", update);
     input.addEventListener("keydown", e => {
-      if (e.key === "ArrowDown") { e.preventDefault(); sel = Math.min(sel + 1, rows.length - 1); render(); }
-      else if (e.key === "ArrowUp") { e.preventDefault(); sel = Math.max(sel - 1, 0); render(); }
+      // the arrows wrap around: Up from the first row reaches the last (the text search)
+      if (e.key === "ArrowDown" && rows.length) { e.preventDefault(); sel = (sel + 1) % rows.length; render(); }
+      else if (e.key === "ArrowUp" && rows.length) { e.preventDefault(); sel = (sel - 1 + rows.length) % rows.length; render(); }
       else if (e.key === "Enter") { e.preventDefault(); choose(sel); }
       else if (e.key === "Escape") { e.preventDefault(); close(false); }
     });
