@@ -70,28 +70,23 @@ UNIT=/etc/systemd/system/lodge-wiki.service
 
 say "Packages"
 NEED=()
-for p in git curl ca-certificates rsync; do dpkg -s "$p" >/dev/null 2>&1 || NEED+=("$p"); done
+for p in git curl ca-certificates rsync golang-go; do dpkg -s "$p" >/dev/null 2>&1 || NEED+=("$p"); done
 if [ ${#NEED[@]} -gt 0 ]; then
   apt-get update -qq && apt-get install -y -qq "${NEED[@]}" >/dev/null
   note "installed ${NEED[*]}"
 else
-  note "git, curl, rsync present"
+  note "git, curl, rsync, Go present"
 fi
 
-# Go: the version go.mod asks for, from go.dev (distribution packages lag behind).
-GO_WANT="$(awk '/^go /{print $2; exit}' "$REPO/go.mod")"
-GO_HAVE="$(/usr/local/go/bin/go env GOVERSION 2>/dev/null | sed 's/^go//' || true)"
-if [ -z "$GO_HAVE" ] || [ "$(printf '%s\n%s\n' "$GO_WANT" "$GO_HAVE" | sort -V | head -1)" != "$GO_WANT" ]; then
-  case "$(uname -m)" in
-    x86_64) GOARCH=amd64 ;; aarch64|arm64) GOARCH=arm64 ;; *) die "Unsupported CPU: $(uname -m)" ;;
-  esac
-  note "installing Go $GO_WANT (had: ${GO_HAVE:-none})"
-  curl -fsSL "https://go.dev/dl/go${GO_WANT}.linux-${GOARCH}.tar.gz" -o /tmp/go.tgz
-  rm -rf /usr/local/go && tar -C /usr/local -xzf /tmp/go.tgz && rm /tmp/go.tgz
-else
-  note "Go $GO_HAVE"
-fi
-export PATH="/usr/local/go/bin:$PATH"
+# Go: the distribution's package is enough, even when it is older than
+# go.mod asks for: since Go 1.21 the go command downloads the toolchain
+# go.mod names (checked against the Go checksum database). GOTOOLCHAIN is
+# set explicitly because some distributions turn that off by default.
+GO_HAVE="$(go env GOVERSION | sed 's/^go//')"
+[ "$(printf '%s\n%s\n' 1.21 "$GO_HAVE" | sort -V | head -1)" = 1.21 ] \
+  || die "Go $GO_HAVE from the packages is too old to fetch a newer toolchain (needs 1.21+). Install a newer golang-go (e.g. from backports) and run again."
+export GOTOOLCHAIN=auto
+note "Go $GO_HAVE from the packages; building with $(cd "$REPO" && go env GOVERSION)"
 
 # Caddy: HTTPS with automatic certificates, only when a domain is set.
 if [ -n "$DOMAIN" ] && ! command -v caddy >/dev/null; then

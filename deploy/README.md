@@ -36,7 +36,7 @@ It pulls the latest code, rebuilds, rewrites the service and Caddy configuration
 
 | What | Where |
 | --- | --- |
-| Go (the version in `go.mod`), git, Caddy | `/usr/local/go`, packages |
+| Go, git, Caddy | packages (the packaged Go downloads the toolchain `go.mod` names, into root's module cache) |
 | Service account `lodge` and its deploy key | home `/srv/lodge`, key `/srv/lodge/.ssh/id_ed25519` |
 | Content repo, with media in `_media/` | `/srv/lodge/lodge-data` |
 | Session key and image cache (disposable) | `/srv/lodge/lodge-state` |
