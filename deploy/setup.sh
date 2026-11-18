@@ -6,9 +6,10 @@
 #   (edit deploy/lodge.conf)
 #   sudo deploy/setup.sh            # installs everything; run again any time to update
 #
-# Every run is safe to repeat: it pulls the latest code, rebuilds, merges
-# data changes pushed from elsewhere, rewrites the service and web server
-# configuration, restarts the wiki and checks that it answers.
+# Every run is safe to repeat: it pulls the latest code (and restarts
+# itself if that changed this script), rebuilds, rewrites the service and
+# web server configuration, restarts the wiki and checks that it answers.
+# The wiki merges data changes pushed from elsewhere itself (SYNC=yes).
 set -euo pipefail
 # (With pipefail, never write "cmd | grep -q": grep -q stops reading early,
 # cmd gets a broken pipe and the test fails. Capture the output first.)
@@ -24,6 +25,23 @@ die()  { printf '\033[31mxx %s\033[0m\n' "$*" >&2; exit 1; }
 
 [ "$(id -u)" -eq 0 ] || die "Run with sudo: sudo $0"
 command -v apt-get >/dev/null || die "This script expects Debian or Ubuntu (apt-get)."
+OWNER="${SUDO_USER:-root}"   # who owns this lodge-wiki checkout
+
+# ---------- update this checkout first ----------
+# Pull before doing anything else and, if that brought new code, run the
+# new version of this script instead of carrying on with the old one.
+if [ -z "${LODGE_SETUP_PULLED:-}" ] && [ -d "$REPO/.git" ]; then
+  BEFORE="$(sudo -u "$OWNER" git -C "$REPO" rev-parse HEAD)"
+  if sudo -u "$OWNER" git -C "$REPO" pull --ff-only -q; then
+    if [ "$(sudo -u "$OWNER" git -C "$REPO" rev-parse HEAD)" != "$BEFORE" ]; then
+      note "updated lodge-wiki to $(sudo -u "$OWNER" git -C "$REPO" log -1 --format='%h %s'); restarting the script"
+      export LODGE_SETUP_PULLED=1
+      exec bash "$REPO/deploy/setup.sh" "$@"
+    fi
+  else
+    warn "could not update lodge-wiki (local changes?); using what is here"
+  fi
+fi
 
 # ---------- settings ----------
 
@@ -44,7 +62,6 @@ DATA="$BASE/lodge-data"
 STATE="$BASE/lodge-state"
 BIN=/usr/local/bin/lodge-wiki
 UNIT=/etc/systemd/system/lodge-wiki.service
-OWNER="${SUDO_USER:-root}"   # who owns this lodge-wiki checkout
 
 # ---------- packages ----------
 
@@ -109,13 +126,7 @@ as_svc git config --global pull.rebase false
 # ---------- code ----------
 
 say "Code"
-if [ -d "$REPO/.git" ]; then
-  if sudo -u "$OWNER" git -C "$REPO" pull --ff-only -q; then
-    note "lodge-wiki at $(sudo -u "$OWNER" git -C "$REPO" log -1 --format='%h %s')"
-  else
-    warn "could not update lodge-wiki (local changes?); building what is here"
-  fi
-fi
+[ -d "$REPO/.git" ] && note "lodge-wiki at $(sudo -u "$OWNER" git -C "$REPO" log -1 --format='%h %s')"
 OLD_SUM="$(sha256sum "$BIN" 2>/dev/null | cut -d' ' -f1 || true)"
 ( cd "$REPO" && GOFLAGS="-trimpath -buildvcs=false" go build -o /tmp/lodge-wiki.new . )
 install -m 755 /tmp/lodge-wiki.new "$BIN" && rm /tmp/lodge-wiki.new
