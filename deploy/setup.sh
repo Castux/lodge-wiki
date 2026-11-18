@@ -11,6 +11,7 @@
 # web server configuration, restarts the wiki and checks that it answers.
 # The wiki merges data changes pushed from elsewhere itself (SYNC=yes).
 set -euo pipefail
+export DEBIAN_FRONTEND=noninteractive  # (sudo drops it) no apt questions or dialog warnings
 # (With pipefail, never write "cmd | grep -q": grep -q stops reading early,
 # cmd gets a broken pipe and the test fails. Capture the output first.)
 
@@ -107,7 +108,9 @@ if ! id "$SERVICE_USER" >/dev/null 2>&1; then
   note "created user $SERVICE_USER (home $BASE)"
 fi
 install -d -o "$SERVICE_USER" -g "$SERVICE_USER" -m 750 "$BASE" "$STATE"
-as_svc() { sudo -u "$SERVICE_USER" -H "$@"; }
+# Run as the service account, from / (it cannot enter the folder this
+# script runs from: home folders are private on recent Ubuntu).
+as_svc() { (cd / && sudo -u "$SERVICE_USER" -H "$@"); }
 
 # An SSH key so the server can pull and push the data repo.
 KEY="$BASE/.ssh/id_ed25519"
