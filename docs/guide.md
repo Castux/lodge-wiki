@@ -253,9 +253,8 @@ it. Clicking an image opens it full size.
   ![The gobliner](/_media/foolslanding/gobliner.jpg)
   ```
 
-- An image at the very top of a page, right before the title, is shown as
-  a wide **banner**, cropped to a band across the page (unless it has a
-  size or a side).
+The wiki's look (its theme) may add touches of its own, such as a banner
+at the top of a page: the wiki describes them on one of its pages.
 
 To change the **size** or put the image **beside the text**, add one of
 these words after a `#` at the end of the address (two can be combined
@@ -292,8 +291,8 @@ uploading a file with an existing name asks before replacing it.
 
 ### Boxes and special styles
 
-Where Markdown has no syntax, HTML can be used directly. The wiki's style
-sheet provides a few boxes:
+Where Markdown has no syntax, HTML can be used directly, and the wiki's
+look (its theme) can give names to boxes and styles, used like this:
 
 ```html
 <div class="spoiler">
@@ -301,22 +300,12 @@ sheet provides a few boxes:
 Blurred until hovered or tapped. **Markdown** works inside.
 
 </div>
-
-The sign reads <span class="badaawi">Welcome</span>.
 ```
 
 Leave a blank line after the opening tag and before the closing tag,
-otherwise the Markdown inside is not processed.
-
-| Class | Effect |
-| --- | --- |
-| `spoiler` | hides its content until hovered or tapped |
-| `badaawi` | writes in the Badaawi script |
-| `noticeboard` with `wood1`, `wood2` or `wood3` | a wooden board with pinned notices (put a picture listing inside) |
-| `statusboard` with `on_quest`, `looking_for_quest`, `retired`, `dead` or `missing` | character portraits on a scene |
-
-Folders can have their own look (Skarnholm does): their style sheet may add
-other classes.
+otherwise the Markdown inside is not processed. Which names exist depends
+on the theme: the wiki lists them on one of its pages. Folders can have
+their own look, which may add others.
 
 ### What exactly is supported
 
