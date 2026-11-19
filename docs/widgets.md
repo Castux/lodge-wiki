@@ -71,6 +71,20 @@ with `err.conflict = true` (and `err.rev`, the current revision) instead
 of overwriting. Read again, apply the change, write again. Writes are
 limited to 30 a minute per person. JSON must be valid.
 
+## Choosing a page
+
+`wiki.findPage` shows the wiki's page finder (the one of Ctrl+K), for a
+field that links to a page:
+
+```js
+const got = await wiki.findPage({
+  placeholder: "Link to a page…", // the finder's prompt
+  query: input.value,              // initial search text
+  text: true,                      // a last row keeps the typed text as is
+});
+// got: {id, title, url} for a page, {text} for the typed text, null if closed
+```
+
 ## Other data
 
 Plain `GET` requests, for logged-in readers, returning JSON:

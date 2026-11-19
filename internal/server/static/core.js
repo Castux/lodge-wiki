@@ -404,6 +404,18 @@ document.addEventListener("click", async ev => {
     extra: q => [{ label: "Search all pages for “" + q + "”", run: () => { location.href = "/_/search?q=" + encodeURIComponent(q); } }],
   });
 
+  // For widgets: wiki.findPage({placeholder, query, text}) shows the finder
+  // and resolves to the chosen page {id, title, url}, or to null if it was
+  // closed. With text: true, the last row keeps what was typed as is,
+  // resolving to {text} (an address or an outside link, say).
+  if (window.wiki) window.wiki.findPage = (opts = {}) => new Promise(resolve => open({
+    placeholder: opts.placeholder || "Find a page…",
+    query: opts.query || "",
+    pick: p => resolve({ id: p.id, title: p.t, url: p.u }),
+    extra: opts.text ? q => [{ label: "Use “" + q + "” as written", run: () => resolve({ text: q }) }] : null,
+    close: () => resolve(null),
+  }));
+
   // Editor: insert a link to a page, with the selected text (if any) as
   // the link's text (Ctrl+K, or the link button).
   const form = document.querySelector(".lw-editor");
