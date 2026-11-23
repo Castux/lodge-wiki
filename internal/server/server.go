@@ -146,11 +146,28 @@ func (s *Server) routes() {
 // ServeHTTP implements http.Handler.
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
-	s.handler.ServeHTTP(w, r)
+	sw := &statusWriter{ResponseWriter: w, status: http.StatusOK}
+	s.handler.ServeHTTP(sw, r)
 	if !strings.HasPrefix(r.URL.Path, "/_media/") && !strings.HasPrefix(r.URL.Path, "/_/static/") {
-		log.Printf("%s %s (%s)", r.Method, r.URL.Path, time.Since(start).Round(time.Millisecond))
+		log.Printf("%s %s %d %s (%s)", r.Method, r.URL.Path, sw.status, clientIP(r), time.Since(start).Round(time.Millisecond))
 	}
 }
+
+// statusWriter remembers the status code a handler answered with, for the
+// request log.
+type statusWriter struct {
+	http.ResponseWriter
+	status int
+}
+
+func (w *statusWriter) WriteHeader(code int) {
+	w.status = code
+	w.ResponseWriter.WriteHeader(code)
+}
+
+// Unwrap lets http.ResponseController reach the real writer (flushing,
+// deadlines).
+func (w *statusWriter) Unwrap() http.ResponseWriter { return w.ResponseWriter }
 
 // page serves wiki pages, legacy DokuWiki URLs and files from _layout
 // and _widgets folders.
